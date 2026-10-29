@@ -30,13 +30,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests beautifulsoup4 pandas pypdf
 
-      - name: Vérifier les fichiers du dépôt
+      - name: Vérifier les fichiers essentiels
         run: |
           echo "Fichiers présents :"
           find . -maxdepth 3 -type f -print
           test -f update_dashboard.py
           test -f index.html
-          test -f data/tableau_de_bord_veille_biodiversite.csv
+          mkdir -p data
+          if [ ! -f data/tableau_de_bord_veille_biodiversite.csv ]; then
+            echo "CSV absent : il sera créé automatiquement lors de la première veille."
+          fi
 
       - name: Mettre à jour la veille et les alertes
         run: |
