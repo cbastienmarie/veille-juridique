@@ -1,0 +1,58 @@
+name: Veille biodiversité hebdomadaire
+
+on:
+  schedule:
+    - cron: "0 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  update-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Installer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installer les dépendances
+        run: pip install requests beautifulsoup4 pandas pypdf
+
+      - name: Mettre à jour la veille et les alertes
+        run: python update_dashboard.py
+
+      - name: Enregistrer les nouveautés
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/ || true
+          git diff --cached --quiet || git commit -m "Veille hebdomadaire Savoie et alertes enquêtes - $(date -u +'%Y-%m-%d')"
+          git push
+
+      - name: Préparer GitHub Pages
+        run: |
+          mkdir -p site
+          cp -r data site/
+          cp index.html site/
+
+      - name: Configurer GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Publier les fichiers
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Déployer sur GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
