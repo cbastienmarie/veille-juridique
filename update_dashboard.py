@@ -1,357 +1,475 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""Veille biodiversité Savoie : nouveautés, dates d’enquêtes publiques et alertes."""
+"""Veille juridique biodiversité - moteur d'alertes hebdomadaire (Savoie).
 
-import datetime
+1. Lit le référentiel éditorial (data/enjeux.json) et les dossiers suivis (data/dossiers.csv).
+2. Ouvre les nouveaux recueils des actes administratifs (RAA) de la préfecture de la Savoie,
+   découpe chaque recueil en actes, et note chaque acte au regard des enjeux.
+3. Lit aussi les pages « enquêtes publiques » et « consultations du public ».
+4. Pour chaque acte pertinent : enjeux détectés, dossiers liés, communes, action à envisager,
+   date butoir (clôture d'enquête/consultation ou fin du délai de recours).
+5. Écrit data/alertes.json (onglet Alertes) sans jamais effacer les alertes déjà traitées.
+"""
+import datetime as dt
 import io
-import os
+import json
 import re
+import sys
+import time
+import unicodedata
+import urllib.parse
+from pathlib import Path
 
-import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 from pypdf import PdfReader
 
 BASE = "https://www.savoie.gouv.fr"
-CSV = "data/tableau_de_bord_veille_biodiversite.csv"
-ALERTS = "data/alertes_enquetes_publiques.csv"
-TODAY = datetime.date.today()
-
-COLUMNS = [
-    "Niveau", "Thème", "Objet", "Type", "Territoire / communes",
-    "Date / statut", "Échéance", "Enjeu biodiversité",
-    "Action de veille", "Priorité", "Lien officiel"
-]
-
-PAGES = {
-    "Enquêtes publiques": BASE + "/Publications/Enquetes-publiques/Informations-generales",
-    "Rapports de commissaires enquêteurs": BASE + "/Actions-de-l-Etat/Paysages-environnement-risques-naturels-et-technologiques/Environnement/Eau-foret-biodiversite/Rapports-de-commissaires-enqueteurs",
-    "Arrêtés environnementaux / loi sur l’eau": BASE + "/Actions-de-l-Etat/Paysages-environnement-risques-naturels-et-technologiques/Environnement/Eau-foret-biodiversite/Arretes-divers-et-declarations-au-titre-de-la-loi-sur-l-eau",
-    "APPB": BASE + "/index.php/Actions-de-l-Etat/Paysages-environnement-risques-naturels-et-technologiques/Environnement/Milieux-et-especes-proteges/Arretes-prefectoraux-de-protection-de-biotopes-APPB",
+RAA_INDEX = BASE + "/Publications/Recueils-hebdomadaires-et-speciaux-des-actes-administratifs"
+EXTRA_PAGES = {
+    "Enquêtes publiques": BASE + "/Publications/Enquetes-publiques",
+    "Consultations du public": BASE + "/Publications/Consultation-du-public",
+    "Loi sur l'eau": BASE + "/Actions-de-l-Etat/Paysages-environnement-risques-naturels-et-technologiques/Environnement/Eau-foret-biodiversite/Arretes-divers-et-declarations-au-titre-de-la-loi-sur-l-eau",
     "Chasse et pêche": BASE + "/Actions-de-l-Etat/Paysages-environnement-risques-naturels-et-technologiques/Environnement/Chasse-et-peche",
-    "Lyon-Turin": BASE + "/Actions-de-l-Etat/Transports-deplacements-et-securite-routiere/Transports-et-deplacements/Lyon-Turin-Ferroviaire",
 }
+DATA = Path("data")
+ENJEUX_F = DATA / "enjeux.json"
+DOSSIERS_F = DATA / "dossiers.csv"
+ALERTES_F = DATA / "alertes.json"
+ETAT_F = DATA / "etat_veille.json"
+TODAY = dt.date.today()
+FIRST_RUN_RAA = 30       # nombre de recueils analysés à la première exécution
+MAX_RAA_PER_RUN = 40
+HEADERS = {"User-Agent": "Mozilla/5.0 (veille-juridique-biodiversite; contact via GitHub)"}
 
-KEYWORDS = [
-    "enquête publique", "enquete publique", "avis d’enquête", "avis d'enquête",
-    "commissaire enquêteur", "autorisation environnementale", "loi sur l’eau",
-    "biodiversit", "espèce protégée", "biotope", "zone humide", "tourbière",
-    "cours d’eau", "nappe", "natura 2000", "loup", "cormoran", "esod",
-    "chasse", "galliforme", "tétras", "bartavelle", "lagopède", "gélinotte",
-    "compensation", "erc", "lyon-turin", "telt", "jo 2030", "olympique"
-]
-
-MONTHS = {
-    "janvier": 1, "février": 2, "mars": 3, "avril": 4, "mai": 5, "juin": 6,
-    "juillet": 7, "août": 8, "septembre": 9, "octobre": 10, "novembre": 11,
-    "décembre": 12, "févr.": 2, "avr.": 4, "juil.": 7, "sept.": 9,
-    "oct.": 10, "nov.": 11, "déc.": 12
-}
+MONTHS = {"janvier": 1, "fevrier": 2, "mars": 3, "avril": 4, "mai": 5, "juin": 6, "juillet": 7,
+          "aout": 8, "septembre": 9, "octobre": 10, "novembre": 11, "decembre": 12}
 
 
-def absolute_url(url):
-    if url.startswith("http"):
-        return url
-    if url.startswith("/"):
-        return BASE + url
-    return url
+def norm(s):
+    s = unicodedata.normalize("NFD", s or "").lower().replace("’", "'")
+    return "".join(c for c in s if unicodedata.category(c) != "Mn")
 
 
-def get_soup(url):
-    response = requests.get(
-        url,
-        timeout=30,
-        headers={"User-Agent": "veille-biodiversite/2.2"}
-    )
-    response.raise_for_status()
-    return BeautifulSoup(response.text, "html.parser")
-
-
-def parse_french_date(text):
-    text = re.sub(r"\s+", " ", text)
-
-    match = re.search(r"\b(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})\b", text)
-    if match:
+def get(url, binary=False, tries=4):
+    url = urllib.parse.quote(url, safe=":/?=&%#")
+    for i in range(tries):
         try:
-            return datetime.date(
-                int(match.group(3)),
-                int(match.group(2)),
-                int(match.group(1))
-            )
-        except ValueError:
-            pass
-
-    match = re.search(
-        r"\b(\d{1,2})(?:er)?\s+([a-zéûôàâèê]+\.?)\s+(\d{4})\b",
-        text,
-        re.IGNORECASE
-    )
-    if match:
-        month = MONTHS.get(
-            match.group(2).lower(),
-            MONTHS.get(match.group(2).lower() + ".")
-        )
-        if month:
-            try:
-                return datetime.date(
-                    int(match.group(3)),
-                    month,
-                    int(match.group(1))
-                )
-            except ValueError:
-                pass
-
+            r = requests.get(url, headers=HEADERS, timeout=90)
+            if r.status_code == 200 and r.content:
+                return r.content if binary else r.text
+            print(f"  HTTP {r.status_code} {url}")
+        except Exception as e:  # noqa: BLE001
+            print(f"  erreur {e} {url}")
+        time.sleep(5 * (i + 1))
     return None
 
 
-def extract_dates_from_text(text):
-    start_date = None
-    end_date = None
-
-    match = re.search(
-        r"(?:du|à compter du|ouverture(?: de l’enquête)?(?: publique)?(?: du)?|à partir du)"
-        r"\s*([0-9]{1,2}[^0-9]{0,20}[0-9]{4})",
-        text,
-        re.IGNORECASE
-    )
-    if match:
-        start_date = parse_french_date(match.group(1))
-
-    match = re.search(
-        r"(?:jusqu’au|jusqu'au|clôture(?: de l’enquête)?(?: publique)?(?: le)?|close le)"
-        r"\s*([0-9]{1,2}[^0-9]{0,20}[0-9]{4})",
-        text,
-        re.IGNORECASE
-    )
-    if match:
-        end_date = parse_french_date(match.group(1))
-
-    if start_date is None or end_date is None:
-        date_strings = re.findall(
-            r"\b\d{1,2}(?:er)?\s+[a-zéûôàâèê]+\.?\s+\d{4}\b"
-            r"|\b\d{1,2}[/\-.]\d{1,2}[/\-.]\d{4}\b",
-            text,
-            re.IGNORECASE
-        )
-        dates = sorted(
-            {d for d in (parse_french_date(x) for x in date_strings) if d}
-        )
-        if dates:
-            if start_date is None:
-                start_date = dates[0]
-            if end_date is None and len(dates) > 1:
-                end_date = dates[-1]
-
-    return start_date, end_date
-
-
-def extract_dates_from_pdf(url):
+def load_json(path, default):
     try:
-        response = requests.get(
-            url,
-            timeout=30,
-            headers={"User-Agent": "veille-biodiversite/2.2"}
-        )
-        response.raise_for_status()
-        reader = PdfReader(io.BytesIO(response.content))
-        text = "\n".join(
-            page.extract_text() or "" for page in reader.pages[:6]
-        )
-        start_date, end_date = extract_dates_from_text(text)
-        return start_date, end_date, None
-    except Exception as error:
-        return None, None, f"PDF : {error}"
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001
+        return default
 
 
-def extract_dates_from_html(url):
+# ---------------------------------------------------------------- dates
+DATE_RE = re.compile(r"(\d{1,2})(?:er)?\s+(janvier|f[ée]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[ée]cembre)\s+(20\d\d)", re.I)
+NUM_DATE_RE = re.compile(r"\b(\d{1,2})/(\d{1,2})/(20\d\d)\b")
+
+
+def to_date(m):
     try:
-        soup = get_soup(url)
-        text = soup.get_text(" ", strip=True)
-        start_date, end_date = extract_dates_from_text(text)
-        return start_date, end_date, None
-    except Exception as error:
-        return None, None, f"HTML : {error}"
-
-
-def find_avis_link(url):
-    try:
-        soup = get_soup(url)
-    except Exception:
+        return dt.date(int(m.group(3)), MONTHS[norm(m.group(2))], int(m.group(1)))
+    except Exception:  # noqa: BLE001
         return None
 
-    for link in soup.select("a[href]"):
-        href = absolute_url(link.get("href", ""))
-        label = (link.get_text(" ", strip=True) + " " + href).lower()
 
-        if not any(word in label for word in ["avis", "enquête", "enquete", "pdf", "dossier", "registre"]):
-            continue
+def find_period(text):
+    """Cherche une période d'enquête / consultation : 'du X au Y', 'jusqu'au Y'."""
+    t = text.replace("\n", " ")
+    d = r"(\d{1,2}(?:er)?\s+\w+\s+20\d\d|\d{1,2}/\d{1,2}/20\d\d)"
+    m = re.search(r"du\s+(?:\w+\s+)?" + d + r".{0,60}?(?:au|jusqu'au|jusqu’au)\s+(?:\w+\s+)?" + d, t, re.I)
+    start = end = None
+    if m:
+        start, end = parse_any(m.group(1)), parse_any(m.group(2))
+    else:
+        m = re.search(r"(?:jusqu'au|jusqu’au|au plus tard le|clôtur\w+ le|close le)\s+(?:\w+\s+)?" + d, t, re.I)
+        if m:
+            end = parse_any(m.group(1))
+    return start, end
 
-        if href.lower().endswith(".pdf") or "enquete" in href or "avis" in label:
-            return href
 
+def parse_any(s):
+    m = DATE_RE.search(s)
+    if m:
+        return to_date(m)
+    m = NUM_DATE_RE.search(s)
+    if m:
+        try:
+            return dt.date(int(m.group(3)), int(m.group(2)), int(m.group(1)))
+        except ValueError:
+            return None
     return None
 
 
-def alert_label(end_date):
-    if end_date is None:
-        return "Échéance inconnue"
-
-    days_left = (end_date - TODAY).days
-
-    if days_left < 0:
-        return "Clôturée"
-    if days_left == 0:
-        return "ALERTE J-0 : contribution possible aujourd’hui"
-    if days_left <= 1:
-        return "ALERTE J-1"
-    if days_left <= 7:
-        return "ALERTE J-7"
-    if days_left <= 15:
-        return "ALERTE J-15"
-    return f"À surveiller — J-{days_left}"
+# ---------------------------------------------------------------- référentiels
+def load_enjeux():
+    e = load_json(ENJEUX_F, None)
+    if not e:
+        sys.exit("data/enjeux.json introuvable ou illisible")
+    for en in e["enjeux"]:
+        en["_kw"] = [(k, norm(k)) for k in en["mots_cles"]]
+    e["_excl"] = [norm(x) for x in e.get("exclusions", [])]
+    return e
 
 
-def scrape_publications():
-    results = []
+def load_dossiers():
+    import csv
+    if not DOSSIERS_F.exists():
+        return []
+    rows = list(csv.DictReader(DOSSIERS_F.open(encoding="utf-8")))
+    stop = {"arrete", "autorisation", "savoie", "projet", "enquete", "publique", "rapport", "commissaire",
+            "enqueteur", "national", "region", "regional", "suivi", "entretien", "amenagement", "creation",
+            "extension", "marais", "lac", "tourbiere", "ruisseau", "zones", "humides", "appb", "plan"}
+    for r in rows:
+        words = re.findall(r"[a-z0-9'-]{5,}", norm(r.get("Objet", "")))
+        r["_terms"] = [w for w in words if w not in stop]
+        r["_communes"] = [norm(c.strip()) for c in re.split(r",|;", r.get("Territoire / communes", "")) if len(c.strip()) > 3]
+    return rows
 
-    for theme, url in PAGES.items():
-        try:
-            soup = get_soup(url)
-        except Exception as error:
-            print(f"AVERTISSEMENT : page inaccessible ({theme}) : {error}")
+
+def load_communes():
+    txt = get("https://geo.api.gouv.fr/departements/73/communes?fields=nom")
+    try:
+        names = [c["nom"] for c in json.loads(txt)]
+    except Exception:  # noqa: BLE001
+        names = []
+    # communes longues d'abord pour éviter les faux positifs
+    return sorted({n for n in names if len(n) > 3}, key=len, reverse=True)
+
+
+# ---------------------------------------------------------------- analyse d'un acte
+def contains(text_n, kw_n):
+    if len(kw_n) <= 5:  # sigles courts : mot entier
+        return re.search(r"\b" + re.escape(kw_n) + r"\b", text_n) is not None
+    return kw_n in text_n
+
+
+def score_acte(title, body, enjeux):
+    tn, bn = norm(title), norm(body)
+    if any(x in tn for x in enjeux["_excl"]):
+        return 0, [], []
+    score, hits, kws = 0, [], set()
+    for en in enjeux["enjeux"]:
+        s = 0
+        for k, kn in en["_kw"]:
+            if contains(tn, kn):
+                s += 3
+                kws.add(k)
+            elif contains(bn, kn):
+                s += 1
+                kws.add(k)
+        if s:
+            bonus = 2 if en["priorite"] == "Très élevée" else 0
+            hits.append({"id": en["id"], "label": en["label"], "score": s + bonus})
+            score += s + bonus
+    hits.sort(key=lambda h: -h["score"])
+    return score, hits, sorted(kws)
+
+
+def type_acte(title_n, body_n):
+    if "enquete publique" in title_n or "ouverture d'une enquete" in body_n[:3000]:
+        return "Enquête publique"
+    if "participation du public" in title_n or "consultation du public" in title_n:
+        return "Consultation du public"
+    if "autorisation environnementale" in title_n or "autorisation environnementale" in body_n[:4000]:
+        return "Autorisation environnementale"
+    if "installation classee" in title_n or "icpe" in title_n:
+        return "ICPE"
+    if "derogation" in title_n and "espece" in (title_n + body_n[:3000]):
+        return "Dérogation espèces protégées"
+    if "mise en demeure" in title_n:
+        return "Mise en demeure"
+    return "Arrêté / décision"
+
+
+def deadline_for(kind, pub, body, delais):
+    start, end = (None, None)
+    if kind in ("Enquête publique", "Consultation du public"):
+        start, end = find_period(body)
+        if end:
+            return start, end, "Clôture de la participation : déposer une contribution avant cette date."
+    key = {"Autorisation environnementale": "autorisation_environnementale", "ICPE": "icpe"}.get(kind, "recours_general")
+    d = delais[key]
+    return start, pub + dt.timedelta(days=d["jours"]), d["texte"] + " (date indicative, à vérifier)"
+
+
+def urgence(deadline, score):
+    if deadline is None:
+        return "À qualifier"
+    j = (deadline - TODAY).days
+    if j < 0:
+        return "Échue"
+    if j <= 7:
+        return "J-7"
+    if j <= 15:
+        return "J-15"
+    if j <= 30 or score >= 15:
+        return "À traiter"
+    return "À surveiller"
+
+
+def link_dossiers(text_n, communes_n, dossiers, hit_ids):
+    out = []
+    for d in dossiers:
+        term_hits = sum(1 for t in d["_terms"] if t in text_n)
+        commune_hit = any(c in communes_n for c in d["_communes"])
+        if term_hits >= 2 or (commune_hit and term_hits >= 1):
+            out.append(d.get("Objet", "")[:120])
+    return out[:6]
+
+
+def actions_for(kind, hits, enjeux):
+    acts = {
+        "Enquête publique": "Consulter le dossier et l'avis de l'autorité environnementale ; déposer une contribution argumentée avant la clôture.",
+        "Consultation du public": "Déposer un avis sur le projet d'arrêté avant la clôture de la consultation.",
+        "Autorisation environnementale": "Analyser les prescriptions et mesures ERC ; recours des tiers possible dans les 4 mois.",
+        "ICPE": "Analyser les prescriptions ; recours des tiers possible dans les 4 mois.",
+        "Dérogation espèces protégées": "Vérifier les 3 conditions de l'article L.411-2 ; envisager recours gracieux/contentieux, voire référé-suspension.",
+        "Mise en demeure": "Suivre l'exécution et l'éventuelle sanction ; signaler les manquements constatés.",
+    }
+    out = [acts.get(kind, "Lire l'arrêté ; évaluer l'opportunité d'un recours gracieux ou contentieux (2 mois).")]
+    by_id = {e["id"]: e for e in enjeux["enjeux"]}
+    for h in hits[:2]:
+        out += by_id[h["id"]]["actions"][:2]
+    seen, res = set(), []
+    for a in out:
+        if a not in seen:
+            seen.add(a)
+            res.append(a)
+    return res
+
+
+# ---------------------------------------------------------------- RAA
+def list_raa():
+    html = get(RAA_INDEX)
+    if not html:
+        return []
+    soup = BeautifulSoup(html, "html.parser")
+    years = sorted({a["href"] for a in soup.find_all("a", href=True)
+                    if re.search(r"/Recueils-hebdomadaires-et-speciaux-des-actes-administratifs/20\d\d", a["href"])})
+    years = [y for y in years if str(TODAY.year) in y or str(TODAY.year - (TODAY.month == 1)) in y][-2:]
+    out = []
+    for y in years:
+        page = get(BASE + y if y.startswith("/") else y)
+        if not page:
             continue
+        s = BeautifulSoup(page, "html.parser")
+        for a in s.find_all("a", href=True):
+            h = a["href"]
+            if "/contenu/telechargement/" in h and h.lower().endswith(".pdf"):
+                fn = urllib.parse.unquote(h.rsplit("/", 1)[-1])
+                m = re.search(r"73-(20\d\d)-(\d{3})", fn)
+                dm = re.match(r"(20\d\d)-(\d\d)-(\d\d)", fn)
+                try:
+                    dfic = dt.date(*map(int, dm.groups())).isoformat() if dm else None
+                except ValueError:
+                    dfic = None
+                out.append({"url": BASE + h if h.startswith("/") else h, "fichier": fn,
+                            "numero": f"73-{m.group(1)}-{m.group(2)}" if m else fn,
+                            "date_fichier": dfic})
+    uniq = {r["url"]: r for r in out}
+    return sorted(uniq.values(), key=lambda r: r["numero"])
 
-        for link in soup.select("a[href]"):
-            title = re.sub(r"\s+", " ", link.get_text(" ", strip=True))
-            href = absolute_url(link.get("href", ""))
 
-            if not title or len(title) < 12:
+ACT_ID = re.compile(r"\b(73-20\d\d-\d\d-\d\d-\d{5})\b")
+
+
+def split_raa(pdf_bytes):
+    reader = PdfReader(io.BytesIO(pdf_bytes))
+    pages = []
+    for p in reader.pages:
+        try:
+            pages.append(p.extract_text() or "")
+        except Exception:  # noqa: BLE001
+            pages.append("")
+    full_head = "\n".join(pages[:3])
+    pub = None
+    m = re.search(r"PUBLI[ÉE]\s+LE\s+(\d{1,2}(?:er)?\s+\w+\s+20\d\d)", full_head, re.I)
+    if m:
+        pub = parse_any(m.group(1))
+    # titres depuis le sommaire
+    titles = {}
+    som = re.sub(r"\s+", " ", full_head)
+    for mm in re.finditer(r"(73-20\d\d-\d\d-\d\d-\d{5})\s*-\s*(.+?)\(\d+\s*pages?\)", som):
+        titles[mm.group(1)] = mm.group(2).strip()
+    actes, cur = {}, None
+    for i, txt in enumerate(pages):
+        if i < 1:
+            continue
+        ids = ACT_ID.findall(txt)
+        if i < 8 and re.search(r"\(\d+\s*pages?\)", txt) and re.search(r"Page\s*\d+", txt):
+            continue  # page de sommaire
+        if ids:
+            cur = ids[0]
+        if cur:
+            a = actes.setdefault(cur, {"id": cur, "page": i + 1, "texte": []})
+            a["texte"].append(txt)
+    for a in actes.values():
+        a["texte"] = "\n".join(a["texte"])
+        a["titre"] = titles.get(a["id"]) or first_title(a["texte"], a["id"])
+    return pub, list(actes.values())
+
+
+def first_title(text, aid):
+    for line in text.splitlines():
+        if aid in line and len(line) > len(aid) + 10:
+            return line.split(aid, 1)[1].strip(" -")[:250]
+    return text.strip().splitlines()[0][:200] if text.strip() else aid
+
+
+def communes_in(text, communes):
+    found = []
+    for c in communes:
+        if re.search(r"(?<![\w-])" + re.escape(c) + r"(?![\w-])", text):
+            found.append(c)
+            if len(found) >= 8:
+                break
+    return found
+
+
+def build_alert(src, titre, texte, url, pub, enjeux, dossiers, communes, acte_id=None, page=None):
+    score, hits, kws = score_acte(titre, texte, enjeux)
+    if score < enjeux.get("seuil_alerte", 4) or not hits:
+        return None
+    tn, bn = norm(titre), norm(texte)
+    kind = type_acte(tn, bn)
+    start, deadline, regle = deadline_for(kind, pub or TODAY, texte, enjeux["delais"])
+    coms = communes_in(titre + "\n" + texte[:6000], communes)
+    dos = link_dossiers(bn[:20000] + " " + tn, [norm(c) for c in coms], dossiers, [h["id"] for h in hits])
+    if dos:
+        score += 5
+    extrait = re.sub(r"\s+", " ", texte)
+    k0 = next((norm(k) for k in kws), "")
+    pos = norm(extrait).find(k0) if k0 else -1
+    extrait = extrait[max(0, pos - 200): pos + 400] if pos >= 0 else extrait[:500]
+    return {
+        "uid": acte_id or url,
+        "source": src,
+        "acte": acte_id or "",
+        "titre": re.sub(r"\s+", " ", titre).strip(),
+        "type": kind,
+        "date_publication": (pub or TODAY).isoformat(),
+        "debut": start.isoformat() if start else "",
+        "date_butoir": deadline.isoformat() if deadline else "",
+        "regle_delai": regle,
+        "urgence": urgence(deadline, score),
+        "score": score,
+        "enjeux": [h["label"] for h in hits[:4]],
+        "mots_cles": kws[:12],
+        "communes": coms,
+        "dossiers_lies": dos,
+        "actions": actions_for(kind, hits, enjeux),
+        "extrait": extrait.strip(),
+        "lien": url + (f"#page={page}" if page else ""),
+        "detecte_le": TODAY.isoformat(),
+        "statut": "Nouveau",
+    }
+
+
+def scan_extra_pages(enjeux, dossiers, communes, known):
+    out = []
+    for src, url in EXTRA_PAGES.items():
+        html = get(url)
+        if not html:
+            continue
+        soup = BeautifulSoup(html, "html.parser")
+        for a in soup.find_all("a", href=True):
+            label = a.get_text(" ", strip=True)
+            h = a["href"]
+            if len(label) < 15 or any(x in label for x in ("Partager", "Facebook", "LinkedIn", "Twitter")):
                 continue
-            if not href.startswith("http"):
+            full = h if h.startswith("http") else BASE + h if h.startswith("/") else None
+            if not full or "savoie.gouv.fr" not in full or full in known:
                 continue
-
-            searchable = (title + " " + href).lower()
-            if not any(keyword in searchable for keyword in KEYWORDS):
+            if not (full.startswith(url) or "/contenu/telechargement/" in full):
                 continue
-
-            item_type = (
-                "Enquête publique"
-                if "enquêt" in searchable
-                else "Publication officielle"
-            )
-
-            results.append({
-                "Thème": theme,
-                "Objet": title,
-                "Lien": href,
-                "Type": item_type
-            })
-
-    return results
+            text = label
+            if full.lower().endswith(".pdf"):
+                b = get(full, binary=True)
+                if b:
+                    try:
+                        text += "\n" + "\n".join((p.extract_text() or "") for p in PdfReader(io.BytesIO(b)).pages[:6])
+                    except Exception:  # noqa: BLE001
+                        pass
+            else:
+                sub = get(full)
+                if sub:
+                    text += "\n" + BeautifulSoup(sub, "html.parser").get_text(" ", strip=True)[:20000]
+            al = build_alert(src, label, text, full, TODAY, enjeux, dossiers, communes)
+            if al:
+                out.append(al)
+            known.add(full)
+    return out
 
 
 def main():
-    os.makedirs("data", exist_ok=True)
+    DATA.mkdir(exist_ok=True)
+    enjeux, dossiers = load_enjeux(), load_dossiers()
+    communes = load_communes()
+    print(f"{len(enjeux['enjeux'])} enjeux, {len(dossiers)} dossiers, {len(communes)} communes")
+    etat = load_json(ETAT_F, {"raa_traites": [], "pages_vues": []})
+    alertes = load_json(ALERTES_F, {"alertes": []})
+    by_uid = {a["uid"]: a for a in alertes["alertes"]}
+    first_run = not etat["raa_traites"]
+    done = set(etat["raa_traites"])
 
-    if os.path.exists(CSV):
+    raa = [r for r in list_raa() if r["url"] not in done]
+    if first_run:
+        raa = raa[-FIRST_RUN_RAA:]  # rattrapage : derniers recueils (~6 semaines)
+    raa = raa[-MAX_RAA_PER_RUN:]
+    print(f"{len(raa)} RAA à analyser")
+    new = 0
+    for r in raa:
+        b = get(r["url"], binary=True)
+        if not b:
+            continue  # réessayé la semaine suivante
         try:
-            dataframe = pd.read_csv(CSV)
-        except Exception as error:
-            print(f"AVERTISSEMENT : CSV illisible, création d’un nouveau fichier : {error}")
-            dataframe = pd.DataFrame(columns=COLUMNS)
-    else:
-        dataframe = pd.DataFrame(columns=COLUMNS)
-
-    for column in COLUMNS:
-        if column not in dataframe.columns:
-            dataframe[column] = None
-
-    existing_links = set(
-        dataframe["Lien officiel"].dropna().astype(str)
-    )
-
-    alerts = []
-    added_items = 0
-
-    for item in scrape_publications():
-        link = item["Lien"]
-
-        if link in existing_links:
+            pub, actes = split_raa(b)
+        except Exception as e:  # noqa: BLE001
+            print(f"  PDF illisible {r['fichier']}: {e}")
+            done.add(r["url"])
             continue
+        if not pub and r["date_fichier"]:
+            pub = dt.date.fromisoformat(r["date_fichier"])
+        kept = 0
+        for a in actes:
+            al = build_alert(f"RAA {r['numero']}", a["titre"], a["texte"], r["url"], pub, enjeux, dossiers,
+                             communes, a["id"], a["page"])
+            if al and al["uid"] not in by_uid:
+                by_uid[al["uid"]] = al
+                kept += 1
+        new += kept
+        print(f"  {r['numero']} : {len(actes)} actes, {kept} alertes")
+        done.add(r["url"])
 
-        if link.lower().endswith(".pdf"):
-            start_date, end_date, error = extract_dates_from_pdf(link)
-        else:
-            start_date, end_date, error = extract_dates_from_html(link)
+    known = set(etat.get("pages_vues", [])) | {a["lien"] for a in by_uid.values()}
+    for al in scan_extra_pages(enjeux, dossiers, communes, known):
+        if al["uid"] not in by_uid:
+            by_uid[al["uid"]] = al
+            new += 1
+    etat["pages_vues"] = sorted(known)[-3000:]
 
-            if start_date is None or end_date is None:
-                avis_link = find_avis_link(link)
-                if avis_link:
-                    if avis_link.lower().endswith(".pdf"):
-                        start2, end2, error2 = extract_dates_from_pdf(avis_link)
-                    else:
-                        start2, end2, error2 = extract_dates_from_html(avis_link)
-
-                    start_date = start_date or start2
-                    end_date = end_date or end2
-                    error = error or error2
-
-        if end_date:
-            deadline = end_date.isoformat()
-        else:
-            deadline = "À vérifier dans le document"
-            if error:
-                deadline += f" ({error})"
-
-        priority = "Élevée"
-        action = "Consulter le document"
-
-        if end_date and end_date >= TODAY:
-            action = "Contribuer avant la clôture"
-            if (end_date - TODAY).days <= 15:
-                priority = "Très élevée"
-
-        new_row = {
-            "Niveau": "Savoie",
-            "Thème": item["Thème"],
-            "Objet": item["Objet"],
-            "Type": item["Type"],
-            "Territoire / communes": "Savoie",
-            "Date / statut": TODAY.isoformat(),
-            "Échéance": deadline,
-            "Enjeu biodiversité": "À qualifier après lecture du document",
-            "Action de veille": action,
-            "Priorité": priority,
-            "Lien officiel": link
-        }
-
-        dataframe = pd.concat(
-            [dataframe, pd.DataFrame([new_row])],
-            ignore_index=True
-        )
-        existing_links.add(link)
-        added_items += 1
-
-        if item["Type"] == "Enquête publique":
-            alerts.append({
-                "Objet": item["Objet"],
-                "Lien": link,
-                "Début": start_date.isoformat() if start_date else "",
-                "Clôture": end_date.isoformat() if end_date else "",
-                "Alerte": alert_label(end_date),
-                "Date de contrôle": TODAY.isoformat()
-            })
-
-    dataframe.to_csv(CSV, index=False)
-
-    alerts_dataframe = pd.DataFrame(
-        alerts,
-        columns=["Objet", "Lien", "Début", "Clôture", "Alerte", "Date de contrôle"]
-    )
-    alerts_dataframe.to_csv(ALERTS, index=False)
-
-    print(f"{added_items} nouveaux objets ajoutés.")
-    print(f"{len(alerts)} enquêtes publiques analysées.")
+    # recalcul des urgences (les dates avancent) ; les statuts saisis sont conservés
+    for a in by_uid.values():
+        if a.get("date_butoir"):
+            a["urgence"] = urgence(dt.date.fromisoformat(a["date_butoir"]), a["score"])
+    lst = sorted(by_uid.values(), key=lambda a: (a["detecte_le"], a["score"]), reverse=True)
+    alertes = {"mise_a_jour": dt.datetime.now().isoformat(timespec="minutes"),
+               "nb_raa_analyses": len(done), "alertes": lst}
+    ALERTES_F.write_text(json.dumps(alertes, ensure_ascii=False, indent=1), encoding="utf-8")
+    etat["raa_traites"] = sorted(done)
+    ETAT_F.write_text(json.dumps(etat, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(f"{new} nouvelles alertes ; {len(lst)} alertes au total")
 
 
 if __name__ == "__main__":
