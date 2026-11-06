@@ -25,11 +25,21 @@ from pypdf import PdfReader
 
 BASE = "https://www.savoie.gouv.fr"
 RAA_INDEX = BASE + "/Publications/Recueils-hebdomadaires-et-speciaux-des-actes-administratifs"
+ENV = BASE + "/Actions-de-l-Etat/Paysages-environnement-risques-naturels-et-technologiques/Environnement"
+EP = BASE + "/Publications/Enquetes-publiques"
 EXTRA_PAGES = {
-    "Enquêtes publiques": BASE + "/Publications/Enquetes-publiques",
-    "Consultations du public": BASE + "/Publications/Consultation-du-public",
-    "Loi sur l'eau": BASE + "/Actions-de-l-Etat/Paysages-environnement-risques-naturels-et-technologiques/Environnement/Eau-foret-biodiversite/Arretes-divers-et-declarations-au-titre-de-la-loi-sur-l-eau",
-    "Chasse et pêche": BASE + "/Actions-de-l-Etat/Paysages-environnement-risques-naturels-et-technologiques/Environnement/Chasse-et-peche",
+    "Enquête publique - environnement": EP + "/Environnement",
+    "Enquête publique - aménagement": EP + "/Amenagement-du-territoire",
+    "Enquête publique - DUP": EP + "/Declaration-d-utilite-publique",
+    "Enquête publique - communes": EP + "/Enquetes-publiques-initiees-par-les-communes",
+    "Enquête publique - agriculture": EP + "/Agriculture",
+    "Enquête publique - autres": EP + "/Autres-enquetes",
+    "Participation du public": ENV + "/Participation-du-public-a-l-elaboration-des-decisions",
+    "ICPE": ENV + "/Installations-classees-pour-la-protection-de-l-environnemen",
+    "Loi sur l'eau": ENV + "/Eau-foret-biodiversite/Arretes-divers-et-declarations-au-titre-de-la-loi-sur-l-eau",
+    "Chasse et pêche": ENV + "/Chasse-et-peche",
+    "Milieux et espèces protégés": ENV + "/Milieux-et-especes-proteges",
+    "Circulation milieux naturels": ENV + "/Circulation-dans-les-milieux-naturels",
 }
 DATA = Path("data")
 ENJEUX_F = DATA / "enjeux.json"
@@ -37,6 +47,9 @@ DOSSIERS_F = DATA / "dossiers.csv"
 ALERTES_F = DATA / "alertes.json"
 ETAT_F = DATA / "etat_veille.json"
 TODAY = dt.date.today()
+START = time.time()
+BUDGET_S = 35 * 60      # au-delà, on sauvegarde et on reprend la semaine suivante
+MAX_EXTRA_LINKS = 150
 FIRST_RUN_RAA = 30       # nombre de recueils analysés à la première exécution
 MAX_RAA_PER_RUN = 40
 HEADERS = {"User-Agent": "Mozilla/5.0 (veille-juridique-biodiversite; contact via GitHub)"}
@@ -50,17 +63,18 @@ def norm(s):
     return "".join(c for c in s if unicodedata.category(c) != "Mn")
 
 
-def get(url, binary=False, tries=4):
+def get(url, binary=False, tries=2):
     url = urllib.parse.quote(url, safe=":/?=&%#")
     for i in range(tries):
         try:
-            r = requests.get(url, headers=HEADERS, timeout=90)
+            r = requests.get(url, headers=HEADERS, timeout=(15, 60))
+            time.sleep(1.5)  # courtoisie envers le serveur de la préfecture
             if r.status_code == 200 and r.content:
                 return r.content if binary else r.text
             print(f"  HTTP {r.status_code} {url}")
         except Exception as e:  # noqa: BLE001
             print(f"  erreur {e} {url}")
-        time.sleep(5 * (i + 1))
+        time.sleep(4)
     return None
 
 
@@ -343,6 +357,10 @@ def build_alert(src, titre, texte, url, pub, enjeux, dossiers, communes, acte_id
         return None
     tn, bn = norm(titre), norm(texte)
     kind = type_acte(tn, bn)
+    if src.startswith("Enquête publique") and kind == "Arrêté / décision":
+        kind = "Enquête publique"
+    if src.startswith("Participation") and kind == "Arrêté / décision":
+        kind = "Consultation du public"
     start, deadline, regle = deadline_for(kind, pub or TODAY, texte, enjeux["delais"])
     coms = communes_in(titre + "\n" + texte[:6000], communes)
     dos = link_dossiers(bn[:20000] + " " + tn, [norm(c) for c in coms], dossiers, [h["id"] for h in hits])
@@ -376,39 +394,61 @@ def build_alert(src, titre, texte, url, pub, enjeux, dossiers, communes, acte_id
     }
 
 
-def scan_extra_pages(enjeux, dossiers, communes, known):
-    out = []
-    for src, url in EXTRA_PAGES.items():
-        html = get(url)
-        if not html:
+def page_links(html, prefix):
+    main = BeautifulSoup(html, "html.parser").find("main")
+    if not main:
+        return [], [], ""
+    kids, pdfs = [], []
+    for a in main.find_all("a", href=True):
+        h = a["href"]
+        full = BASE + h if h.startswith("/") else h
+        if "(offset)" in full or "Partager" in a.get_text():
             continue
-        soup = BeautifulSoup(html, "html.parser")
-        for a in soup.find_all("a", href=True):
-            label = a.get_text(" ", strip=True)
-            h = a["href"]
-            if len(label) < 15 or any(x in label for x in ("Partager", "Facebook", "LinkedIn", "Twitter")):
+        if full.startswith(prefix + "/") and full not in kids:
+            kids.append(full)
+        elif "/contenu/telechargement/" in full and full not in pdfs:
+            pdfs.append(full)
+    return kids, pdfs, main.get_text(" ", strip=True)
+
+
+def scan_extra_pages(enjeux, dossiers, communes, known, baseline):
+    """Parcourt les rubriques (2 niveaux) ; une page « feuille » = un dossier publié."""
+    out, visited = [], 0
+    for src, root in EXTRA_PAGES.items():
+        queue = [(root, 0)]
+        while queue:
+            url, depth = queue.pop(0)
+            if visited > MAX_EXTRA_LINKS or time.time() - START > BUDGET_S + 600:
+                print("Plafond de pages atteint")
+                return out
+            html = get(url)
+            visited += 1
+            if not html:
                 continue
-            full = h if h.startswith("http") else BASE + h if h.startswith("/") else None
-            if not full or "savoie.gouv.fr" not in full or full in known:
+            kids, pdfs, text = page_links(html, url)
+            if kids and depth < 2:
+                queue += [(k, depth + 1) for k in kids if k not in known]
+                if depth == 0:
+                    continue
+            if depth == 0 or url in known:
                 continue
-            if not (full.startswith(url) or "/contenu/telechargement/" in full):
-                continue
-            text = label
-            if full.lower().endswith(".pdf"):
-                b = get(full, binary=True)
-                if b:
+            known.add(url)
+            title = BeautifulSoup(html, "html.parser").find("h1")
+            title = title.get_text(" ", strip=True) if title else url.rsplit("/", 1)[-1].replace("-", " ")
+            for pdf in pdfs[:2]:
+                bts = get(pdf, binary=True)
+                if bts:
                     try:
-                        text += "\n" + "\n".join((p.extract_text() or "") for p in PdfReader(io.BytesIO(b)).pages[:6])
+                        text += "\n" + "\n".join((p.extract_text() or "") for p in PdfReader(io.BytesIO(bts)).pages[:5])
                     except Exception:  # noqa: BLE001
                         pass
-            else:
-                sub = get(full)
-                if sub:
-                    text += "\n" + BeautifulSoup(sub, "html.parser").get_text(" ", strip=True)[:20000]
-            al = build_alert(src, label, text, full, TODAY, enjeux, dossiers, communes)
-            if al:
-                out.append(al)
-            known.add(full)
+            al = build_alert(src, title, text[:60000], url, TODAY, enjeux, dossiers, communes)
+            if not al:
+                continue
+            if baseline and not (al["type"] in ("Enquête publique", "Consultation du public") and al["date_butoir"] >= TODAY.isoformat()
+                                 and "Clôture" in al["regle_delai"]):
+                continue  # 1re passe : on n'alerte que sur les participations encore ouvertes
+            out.append(al)
     return out
 
 
@@ -429,7 +469,11 @@ def main():
     raa = raa[-MAX_RAA_PER_RUN:]
     print(f"{len(raa)} RAA à analyser")
     new = 0
-    for r in raa:
+    for n, r in enumerate(raa, 1):
+        if time.time() - START > BUDGET_S:
+            print("Budget de temps atteint : reprise à la prochaine exécution")
+            break
+        print(f"[{n}/{len(raa)}] {r['fichier']}", flush=True)
         b = get(r["url"], binary=True)
         if not b:
             continue  # réessayé la semaine suivante
@@ -452,8 +496,8 @@ def main():
         print(f"  {r['numero']} : {len(actes)} actes, {kept} alertes")
         done.add(r["url"])
 
-    known = set(etat.get("pages_vues", [])) | {a["lien"] for a in by_uid.values()}
-    for al in scan_extra_pages(enjeux, dossiers, communes, known):
+    known = set(etat.get("pages_vues", []))
+    for al in scan_extra_pages(enjeux, dossiers, communes, known, baseline=not etat.get("pages_vues")):
         if al["uid"] not in by_uid:
             by_uid[al["uid"]] = al
             new += 1

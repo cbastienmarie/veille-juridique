@@ -13,6 +13,7 @@ permissions:
 jobs:
   update-and-deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -44,7 +45,7 @@ jobs:
       - name: Mettre à jour la veille et les alertes
         run: |
           set -x
-          python update_dashboard.py
+          python -u update_dashboard.py
 
       - name: Enregistrer les nouveautés
         run: |
