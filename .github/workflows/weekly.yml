@@ -45,7 +45,7 @@ jobs:
       - name: Mettre à jour la veille et les alertes
         run: |
           set -x
-          python -u update_dashboard.py
+          python -u update_dashboard.py 2>&1 | tee data/journal_veille.txt
 
       - name: Enregistrer les nouveautés
         run: |
