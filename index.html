@@ -37,6 +37,24 @@ table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(-
 th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{background:#eef1ec;cursor:pointer;position:sticky;top:0}
 a{color:var(--acc)}.empty{padding:30px;text-align:center;color:var(--mute)}
 .legal{font-size:13px}.legal td{padding:6px 10px}
+.sign{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--acc);border-radius:10px;padding:14px 18px;margin-bottom:10px}
+.sign .h{font-weight:600}.sign .meta{font-size:13px}
+#signBtn{margin-left:auto;background:#fff;color:var(--acc);border:1px solid #fff;border-radius:8px;padding:8px 14px;font:inherit;font-weight:700;cursor:pointer}
+#signBtn:hover{background:var(--acc2)}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-start;justify-content:center;padding:30px 14px;overflow:auto;z-index:50}
+#modal.on{display:flex}
+#modal form{background:#fff;border-radius:12px;max-width:640px;width:100%;padding:22px 24px;position:relative}
+#modal h2{margin:0 0 4px;font-size:18px;color:var(--acc)}
+#modal .sub{color:var(--mute);font-size:13px;margin-bottom:14px}
+#modal label{display:block;font-size:13px;font-weight:600;margin:10px 0 3px}
+#modal input,#modal textarea{width:100%;font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;box-sizing:border-box}
+#modal .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:600px){#modal .row{grid-template-columns:1fr}}
+#modal .send{background:var(--acc);color:#fff;border:0;border-radius:8px;padding:10px 18px;font:inherit;font-weight:700;cursor:pointer;margin-top:16px}
+#modal .close{position:absolute;top:12px;right:14px;border:0;background:none;font-size:20px;cursor:pointer;color:var(--mute)}
+#modal .msg{margin-top:10px;font-size:14px;display:none;padding:10px;border-radius:8px}
+#modal .ok{background:var(--grnbg);color:var(--grn)}#modal .ko{background:var(--redbg);color:var(--red)}
+.req::after{content:" *";color:var(--red)}
 @media(max-width:700px){main{padding:14px}.grid{grid-template-columns:1fr}.bar input{min-width:100%}}
 </style>
 </head>
@@ -44,10 +62,12 @@ a{color:var(--acc)}.empty{padding:30px;text-align:center;color:var(--mute)}
 <header>
 <h1>Veille juridique biodiversité</h1>
 <p id="maj">France · Auvergne-Rhône-Alpes · Savoie (arrêtés préfectoraux, RAA, enquêtes publiques)</p>
-<nav>
+<nav style="display:flex;align-items:center;flex-wrap:wrap">
 <button data-t="enjeux">1 · Enjeux éditoriaux</button>
 <button data-t="dossiers">2 · Dossiers suivis</button>
 <button data-t="alertes" class="on">3 · Alertes de la semaine<span class="badge" id="nbnew">0</span></button>
+<button data-t="signalements">4 · Signalements<span class="badge" style="background:#fff;color:var(--acc)" id="nbsign">0</span></button>
+<button id="signBtn" type="button">＋ Signaler une alerte</button>
 </nav>
 </header>
 <main>
@@ -86,22 +106,77 @@ a{color:var(--acc)}.empty{padding:30px;text-align:center;color:var(--mute)}
 <div id="a-count" class="meta"></div>
 <div id="a-list"></div>
 </section>
+
+<section class="tab" id="t-signalements">
+<div class="intro">Signalements envoyés par les visiteurs du site (enquête publique, atteinte à une espèce protégée, arrêté à examiner…). Chaque signalement est mis à l’étude pour le groupe juridique lors de l’actualisation hebdomadaire. <b>RGPD</b> : les coordonnées ne servent qu’à recontacter l’auteur du signalement ; demandez leur retrait à tout moment.</div>
+<div id="s-count" class="meta"></div>
+<div id="s-list"></div>
+</section>
 </main>
+
+<div id="modal">
+<form id="signForm">
+<button type="button" class="close" id="signClose" aria-label="Fermer">✕</button>
+<h2>Signaler une alerte</h2>
+<div class="sub">Votre signalement sera mis à l’étude pour le groupe juridique de la veille biodiversité. Les champs marqués * sont nécessaires.</div>
+<div class="row">
+<div><label class="req" for="sf-p">Prénom</label><input id="sf-p" required></div>
+<div><label class="req" for="sf-n">Nom</label><input id="sf-n" required></div>
+</div>
+<label class="req" for="sf-c">Coordonnées (e-mail et/ou téléphone)</label><input id="sf-c" required>
+<div class="row">
+<div><label class="req" for="sf-d">Date de l’alerte</label><input id="sf-d" type="date" required></div>
+<div><label for="sf-l">Commune(s) ou lieu concerné</label><input id="sf-l" placeholder="Ex. : Peisey-Nancroix"></div>
+</div>
+<label class="req" for="sf-t">Titre de l’alerte</label><input id="sf-t" required placeholder="Ex. : enquête publique, atteinte à une espèce protégée, arrêté préfectoral…">
+<label for="sf-li">Lien vers un document officiel (si besoin)</label><input id="sf-li" placeholder="https://…">
+<label class="req" for="sf-de">Description de l’alerte</label><textarea id="sf-de" rows="5" required placeholder="Décrivez précisément l’objet du signalement et pourquoi il mérite une étude juridique."></textarea>
+<button class="send" type="submit">Envoyer le signalement</button>
+<div class="msg" id="signMsg"></div>
+<p class="meta" style="margin-top:8px">En cas de difficulté, vous pouvez aussi remplir le <a href="https://docs.google.com/forms/d/e/1FAIpQLSejE8yXHist2mBKFsIb7-d7S9dSmq9ij8s7ZPhp5IV7xcnANw/viewform" target="_blank" rel="noopener">formulaire en ligne dédié</a>.</p>
+</form>
+</div>
+<iframe name="signFrame" style="display:none" title="envoi"></iframe>
 <script>
 const $=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fr=d=>d?new Date(d+'T12:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}):'—';
 const days=d=>Math.round((new Date(d+'T12:00')-new Date(new Date().toDateString()+' 12:00'))/864e5);
 const prCls=p=>/très/i.test(p)?'p-tres':/élev/i.test(p)?'p-elev':'p-moy', uCls=u=>'u-'+String(u).replace(/ /g,'-');
-document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button,.tab').forEach(x=>x.classList.remove('on'));b.classList.add('on');$('#t-'+b.dataset.t).classList.add('on')});
+document.querySelectorAll('nav button[data-t]').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button[data-t],.tab').forEach(x=>x.classList.remove('on'));b.classList.add('on');$('#t-'+b.dataset.t).classList.add('on')});
 function csv(t){const r=[];let row=[],f='',q=false;for(let i=0;i<t.length;i++){const c=t[i];if(q){if(c=='"'&&t[i+1]=='"'){f+='"';i++}else if(c=='"')q=false;else f+=c}else if(c=='"')q=true;else if(c==','){row.push(f);f=''}else if(c=='\n'){row.push(f);r.push(row);row=[];f=''}else if(c!='\r')f+=c}if(f||row.length){row.push(f);r.push(row)}const h=r.shift();return r.filter(x=>x.length>1).map(x=>Object.fromEntries(h.map((k,i)=>[k,x[i]||''])))}
 const fill=(sel,vals)=>[...new Set(vals)].filter(Boolean).sort().forEach(v=>$(sel).insertAdjacentHTML('beforeend',`<option>${esc(v)}</option>`));
 const ST=JSON.parse(localStorage.getItem('veille-statuts')||'{}');const saveST=()=>localStorage.setItem('veille-statuts',JSON.stringify(ST));
-let ALERTES=[];
+let ALERTES=[],SIGN=[];
 
-Promise.all([fetch('data/enjeux.json').then(r=>r.json()),fetch('data/dossiers.csv').then(r=>r.text()).then(csv),fetch('data/alertes.json?'+Date.now()).then(r=>r.ok?r.json():{alertes:[]}).catch(()=>({alertes:[]}))])
-.then(([E,D,A])=>{renderEnjeux(E);renderDossiers(D);ALERTES=A.alertes||[];
+Promise.all([fetch('data/enjeux.json').then(r=>r.json()),fetch('data/dossiers.csv').then(r=>r.text()).then(csv),fetch('data/alertes.json?'+Date.now()).then(r=>r.ok?r.json():{alertes:[]}).catch(()=>({alertes:[]})),fetch('data/signalements.json?'+Date.now()).then(r=>r.ok?r.json():{signalements:[]}).catch(()=>({signalements:[]}))])
+.then(([E,D,A,S])=>{renderEnjeux(E);renderDossiers(D);ALERTES=A.alertes||[];SIGN=S.signalements||[];
  if(A.mise_a_jour)$('#maj').textContent=`Dernière analyse : ${new Date(A.mise_a_jour).toLocaleString('fr-FR')} · ${A.nb_raa_analyses||0} recueils RAA analysés · ${ALERTES.length} alertes`;
- initAlertes(E)}).catch(e=>{$('#a-list').innerHTML=`<div class="empty">Erreur de chargement des données (${esc(e)}). Le tableau doit être ouvert via GitHub Pages.</div>`});
+ renderSign();initAlertes(E)}).catch(e=>{$('#a-list').innerHTML=`<div class="empty">Erreur de chargement des données (${esc(e)}). Le tableau doit être ouvert via GitHub Pages.</div>`});
+
+/* ---- Signalements (groupe juridique) ---- */
+const GID={p:'1434154626',n:'944015406',c:'305702213',d:'1030520975',t:'1430536643',l:'806391754',li:'1567278',de:'1118498980'};
+const FORM_URL='https://docs.google.com/forms/d/e/1FAIpQLSejE8yXHist2mBKFsIb7-d7S9dSmq9ij8s7ZPhp5IV7xcnANw/formResponse';
+function renderSign(){$('#nbsign').textContent=SIGN.length;
+ $('#s-count').textContent=`${SIGN.length} signalement(s) — à l'étude pour le groupe juridique`;
+ $('#s-list').innerHTML=SIGN.length?SIGN.map(s=>`<div class="sign"><div class="h">${esc(s.titre)}</div>
+ <div class="meta">Signalé par ${esc(s.prenom)} ${esc(s.nom)} (${esc(s.coordonnees)}) · date de l'alerte : ${esc(s.date_alerte)}${s.communes?' · lieu : <b>'+esc(s.communes)+'</b>':''} · reçu le ${fr(s.recu_le)}</div>
+ ${s.lien?`<div class="meta">Lien : <a href="${esc(s.lien)}" target="_blank" rel="noopener">${esc(s.lien)}</a></div>`:''}
+ <p style="margin:8px 0 0;white-space:pre-line">${esc(s.description)}</p></div>`).join('')
+ :'<div class="empty">Aucun signalement pour l’instant. Utilisez le bouton « Signaler une alerte » en haut de page.</div>'}
+const modal=$('#modal');
+$('#signBtn').onclick=()=>{modal.classList.add('on');$('#sf-d').value=new Date().toISOString().slice(0,10)};
+$('#signClose').onclick=()=>modal.classList.remove('on');
+modal.onclick=e=>{if(e.target==modal)modal.classList.remove('on')};
+$('#signForm').onsubmit=e=>{
+ e.preventDefault();
+ const f=document.createElement('form');f.method='POST';f.action=FORM_URL;f.target='signFrame';f.style.display='none';
+ const v={p:$('#sf-p').value.trim(),n:$('#sf-n').value.trim(),c:$('#sf-c').value.trim(),d:$('#sf-d').value,t:$('#sf-t').value.trim(),l:$('#sf-l').value.trim(),li:$('#sf-li').value.trim(),de:$('#sf-de').value.trim()};
+ for(const[k,g]of Object.entries(GID)){if(!v[k])continue;const i=document.createElement('input');i.type='hidden';i.name='entry.'+g;i.value=v[k];f.appendChild(i)}
+ document.body.appendChild(f);f.submit();f.remove();
+ const m=$('#signMsg');m.className='msg ok';m.style.display='block';
+ m.innerHTML='Signalement envoyé : il sera mis à l’étude pour le groupe juridique et apparaîtra dans l’onglet « Signalements » à la prochaine actualisation. Merci.';
+ e.target.querySelectorAll('input,textarea').forEach(x=>{if(x.type!='date')x.value=''});
+};
 
 function renderEnjeux(E){$('#enjeux-intro').innerHTML=esc(E.intro)+` Seuil de déclenchement d’une alerte : score ≥ ${E.seuil_alerte} (mot-clé dans le titre = 3 points, dans le texte = 1 point, +2 pour les enjeux « très élevée », +5 si un dossier suivi est concerné).`;
  $('#enjeux-grid').innerHTML=E.enjeux.map(e=>`<div class="card"><h3>${esc(e.label)} <span class="pill ${prCls(e.priorite)}">${esc(e.priorite)}</span></h3><p>${esc(e.pourquoi)}</p><div class="kw">${e.mots_cles.map(k=>`<span>${esc(k)}</span>`).join('')}</div><p class="meta"><b>Actions types :</b> ${e.actions.map(esc).join(' · ')}</p></div>`).join('')+
