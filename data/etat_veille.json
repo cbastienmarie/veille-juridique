@@ -1,4 +1,10 @@
 {
  "raa_traites": [],
- "pages_vues": []
+ "pages_vues": [
+  "https://www.savoie.gouv.fr/Actions-de-l-Etat/Paysages-environnement-risques-naturels-et-technologiques/Environnement/Milieux-et-especes-proteges/Arretes-prefectoraux-de-protection-de-biotopes-APPB",
+  "https://www.savoie.gouv.fr/Actions-de-l-Etat/Paysages-environnement-risques-naturels-et-technologiques/Environnement/Milieux-et-especes-proteges/Arretes-prefectoraux-de-protection-des-habitats-naturels-APPHN",
+  "https://www.savoie.gouv.fr/Actions-de-l-Etat/Paysages-environnement-risques-naturels-et-technologiques/Environnement/Milieux-et-especes-proteges/Loup",
+  "https://www.savoie.gouv.fr/Actions-de-l-Etat/Paysages-environnement-risques-naturels-et-technologiques/Environnement/Milieux-et-especes-proteges/Natura-2000",
+  "https://www.savoie.gouv.fr/Actions-de-l-Etat/Paysages-environnement-risques-naturels-et-technologiques/Environnement/Milieux-et-especes-proteges/Reglementation-sur-la-cueillette-des-vegetaux"
+ ]
 }
