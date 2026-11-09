@@ -63,7 +63,23 @@ def norm(s):
     return "".join(c for c in s if unicodedata.category(c) != "Mn")
 
 
+CACHE = Path(sys.argv[sys.argv.index("--hors-ligne") + 1]) if "--hors-ligne" in sys.argv else None
+
+
+def cache_key(url):
+    import hashlib
+    return hashlib.sha1(urllib.parse.unquote(url).encode()).hexdigest()
+
+
 def get(url, binary=False, tries=2):
+    """En mode --hors-ligne DIR, lit les contenus déjà collectés (DIR/<sha1>.txt) et liste les manquants."""
+    if CACHE:
+        f = CACHE / (cache_key(url) + ".txt")
+        if f.exists():
+            return f.read_text(encoding="utf-8")
+        with (CACHE / "manquants.txt").open("a", encoding="utf-8") as m:
+            m.write(urllib.parse.unquote(url) + "\n")
+        return None
     url = urllib.parse.quote(url, safe=":/?=&%#")
     for i in range(tries):
         try:
@@ -132,6 +148,7 @@ def load_enjeux():
         sys.exit("data/enjeux.json introuvable ou illisible")
     for en in e["enjeux"]:
         en["_kw"] = [(k, norm(k)) for k in en["mots_cles"]]
+        en["_ctx"] = [(k, norm(k)) for k in en.get("mots_cles_contexte", [])]
     e["_excl"] = [norm(x) for x in e.get("exclusions", [])]
     return e
 
@@ -141,12 +158,16 @@ def load_dossiers():
     if not DOSSIERS_F.exists():
         return []
     rows = list(csv.DictReader(DOSSIERS_F.open(encoding="utf-8")))
-    stop = {"arrete", "autorisation", "savoie", "projet", "enquete", "publique", "rapport", "commissaire",
+    stop = {"contre", "appb", "publications", "prefectorales", "arrete", "autorisation", "savoie", "projet", "enquete", "publique", "rapport", "commissaire",
             "enqueteur", "national", "region", "regional", "suivi", "entretien", "amenagement", "creation",
             "extension", "marais", "lac", "tourbiere", "ruisseau", "zones", "humides", "appb", "plan"}
+    from collections import Counter
     for r in rows:
-        words = re.findall(r"[a-z0-9'-]{5,}", norm(r.get("Objet", "")))
-        r["_terms"] = [w for w in words if w not in stop]
+        words = re.findall(r"[a-z0-9-]{5,}", norm(r.get("Objet", "")).replace("'", " "))
+        r["_terms"] = [w for w in dict.fromkeys(words) if w not in stop]
+    df = Counter(t for r in rows for t in r["_terms"])
+    for r in rows:  # ne garder que les termes distinctifs (présents dans au plus 2 dossiers)
+        r["_terms"] = [t for t in r["_terms"] if df[t] <= 2]
         r["_communes"] = [norm(c.strip()) for c in re.split(r",|;", r.get("Territoire / communes", "")) if len(c.strip()) > 3]
     return rows
 
@@ -174,14 +195,24 @@ def score_acte(title, body, enjeux):
         return 0, [], []
     score, hits, kws = 0, [], set()
     for en in enjeux["enjeux"]:
-        s = 0
+        s, body, local = 0, 0, []
         for k, kn in en["_kw"]:
             if contains(tn, kn):
                 s += 3
-                kws.add(k)
-            elif contains(bn, kn):
-                s += 1
-                kws.add(k)
+                local.append(k)
+            elif contains(bn, kn) and body < 4:  # plafond : un long document ne gonfle pas le score
+                body += 1
+                local.append(k)
+        if local:
+            for k, kn in en["_ctx"]:
+                if contains(tn, kn):
+                    s += 2
+                    local.append(k)
+                elif contains(bn, kn) and body < 5:
+                    body += 1
+                    local.append(k)
+        s += body
+        kws.update(local)
         if s:
             bonus = 2 if en["priorite"] == "Très élevée" else 0
             hits.append({"id": en["id"], "label": en["label"], "score": s + bonus})
@@ -232,14 +263,32 @@ def urgence(deadline, score):
     return "À surveiller"
 
 
+GENERIC = {"arrete", "arretes", "prefectoral", "autorisation", "savoie", "projet", "enquete", "publique", "rapport",
+           "commissaire", "enqueteur", "suivi", "entretien", "amenagement", "creation", "extension", "carnet",
+           "prelevement", "prelevements", "maximaux", "chasse", "ouverture", "cloture", "schema", "departemental",
+           "gestion", "cynegetique", "tableau", "recapitulatif", "publications", "prefectorales", "officielle",
+           "regulation", "applicables", "defense", "simple", "autorisations", "investigations", "reconnaissance",
+           "essai", "pompage", "forage", "ruisseau", "marais", "tourbieres", "tourbiere", "zones", "humides",
+           "sedimentaire", "plateau", "retenue", "microcentrale", "hydroelectrique", "volet", "savoyard", "sites",
+           "infrastructures", "olympiques", "maitre", "ouvrage", "demarche", "grand", "chantier", "itineraire",
+           "cyclable", "derogation", "especes", "protegees", "ressource", "parcellaire", "foret", "forets"}
+
+
 def link_dossiers(text_n, communes_n, dossiers, hit_ids):
     out = []
     for d in dossiers:
-        term_hits = sum(1 for t in d["_terms"] if t in text_n)
+        if d.get("Niveau") != "Savoie":
+            continue
+        terms = [t for t in d["_terms"] if t not in GENERIC and len(t) >= 5]
+        th = sum(1 for t in terms if re.search(r"\b" + re.escape(t) + r"\b", text_n))
         commune_hit = any(c in communes_n for c in d["_communes"])
-        if term_hits >= 2 or (commune_hit and term_hits >= 1):
+        if (terms and th >= min(2, len(terms))) or (commune_hit and th >= 1):
             out.append(d.get("Objet", "")[:120])
-    return out[:6]
+    grands = {"Lyon-Turin": ("lyon-turin", "lyon turin", "telt"), "JO 2030": ("jeux olympiques", "jo 2030", "jop 2030", "alpes francaises 2030")}
+    for theme, keys in grands.items():
+        if any(k in text_n for k in keys):
+            out += [d["Objet"][:120] for d in dossiers if d.get("Thème") == theme and d.get("Niveau") == "Savoie"][:2]
+    return list(dict.fromkeys(out))[:5]
 
 
 def actions_for(kind, hits, enjeux):
@@ -306,12 +355,32 @@ def split_raa(pdf_bytes):
             pages.append(p.extract_text() or "")
         except Exception:  # noqa: BLE001
             pages.append("")
+    return split_pages(pages)
+
+
+def split_text(md):
+    """Même découpage à partir d'un texte déjà extrait (pages séparées par '## N')."""
+    parts = re.split(r"\n#{1,2}\s*(\d{1,4})\s*\n", "\n" + md)
+    pages = [parts[0]] + [parts[i + 1] for i in range(1, len(parts) - 1, 2)]
+    if len(pages) < 3:  # variante : numéros de page seuls sur une ligne, croissants
+        pages, buf, nxt = [], [], 2
+        for line in md.splitlines():
+            if line.strip() == str(nxt):
+                pages.append("\n".join(buf))
+                buf, nxt = [], nxt + 1
+            else:
+                buf.append(line)
+        pages.append("\n".join(buf))
+    pages = [re.sub(r"\*\*|\\_|\\", lambda m: "_" if "_" in m.group(0) else "", p) for p in pages]
+    return pages
+
+
+def split_pages(pages):
     full_head = "\n".join(pages[:3])
     pub = None
     m = re.search(r"PUBLI[ÉE]\s+LE\s+(\d{1,2}(?:er)?\s+\w+\s+20\d\d)", full_head, re.I)
     if m:
         pub = parse_any(m.group(1))
-    # titres depuis le sommaire
     titles = {}
     som = re.sub(r"\s+", " ", full_head)
     for mm in re.finditer(r"(73-20\d\d-\d\d-\d\d-\d{5})\s*-\s*(.+?)\(\d+\s*pages?\)", som):
@@ -320,9 +389,9 @@ def split_raa(pdf_bytes):
     for i, txt in enumerate(pages):
         if i < 1:
             continue
-        ids = ACT_ID.findall(txt)
         if i < 8 and re.search(r"\(\d+\s*pages?\)", txt) and re.search(r"Page\s*\d+", txt):
-            continue  # page de sommaire
+            continue
+        ids = ACT_ID.findall(txt)
         if ids:
             cur = ids[0]
         if cur:
@@ -341,9 +410,15 @@ def first_title(text, aid):
     return text.strip().splitlines()[0][:200] if text.strip() else aid
 
 
+COMMUNES_AMBIGUES = {"École", "La Table", "Montagny", "Les Marches", "La Chapelle", "Arith", "Grignon", "Bonvillard"}
+
+
 def communes_in(text, communes):
     found = []
+    text = re.sub(r"(?i)(?:\b[àa]\s+|73\d{3}\s+|fait\s+[àa]\s+)chamb[ée]ry|chamb[ée]ry,?\s+le\b", " ", text)
     for c in communes:
+        if c in COMMUNES_AMBIGUES:
+            continue
         if re.search(r"(?<![\w-])" + re.escape(c) + r"(?![\w-])", text):
             found.append(c)
             if len(found) >= 8:
@@ -363,7 +438,7 @@ def build_alert(src, titre, texte, url, pub, enjeux, dossiers, communes, acte_id
         kind = "Consultation du public"
     start, deadline, regle = deadline_for(kind, pub or TODAY, texte, enjeux["delais"])
     coms = communes_in(titre + "\n" + texte[:6000], communes)
-    dos = link_dossiers(bn[:20000] + " " + tn, [norm(c) for c in coms], dossiers, [h["id"] for h in hits])
+    dos = link_dossiers(tn + " " + bn[:5000], [norm(c) for c in coms], dossiers, [h["id"] for h in hits])
     if dos:
         score += 5
     extrait = re.sub(r"\s+", " ", texte)
@@ -436,8 +511,12 @@ def scan_extra_pages(enjeux, dossiers, communes, known, baseline):
             title = BeautifulSoup(html, "html.parser").find("h1")
             title = title.get_text(" ", strip=True) if title else url.rsplit("/", 1)[-1].replace("-", " ")
             for pdf in pdfs[:2]:
+                if baseline and CACHE and not (CACHE / (cache_key(pdf) + ".txt")).exists():
+                    continue  # 1re passe : l'historique est référencé sans lire ses PDF
                 bts = get(pdf, binary=True)
-                if bts:
+                if bts and CACHE:
+                    text += "\n" + bts[:20000]
+                elif bts:
                     try:
                         text += "\n" + "\n".join((p.extract_text() or "") for p in PdfReader(io.BytesIO(bts)).pages[:5])
                     except Exception:  # noqa: BLE001
@@ -463,7 +542,13 @@ def main():
     first_run = not etat["raa_traites"]
     done = set(etat["raa_traites"])
 
-    raa = [r for r in list_raa() if r["url"] not in done]
+    texte_dir = Path(sys.argv[sys.argv.index("--raa-texte") + 1]) if "--raa-texte" in sys.argv else None
+    tous = list_raa()
+    if tous:
+        (DATA / "raa_liste.json").write_text(json.dumps(tous, ensure_ascii=False, indent=1), encoding="utf-8")
+    else:
+        tous = load_json(DATA / "raa_liste.json", [])
+    raa = [r for r in tous if r["url"] not in done]
     if first_run:
         raa = raa[-FIRST_RUN_RAA:]  # rattrapage : derniers recueils (~6 semaines)
     raa = raa[-MAX_RAA_PER_RUN:]
@@ -474,11 +559,15 @@ def main():
             print("Budget de temps atteint : reprise à la prochaine exécution")
             break
         print(f"[{n}/{len(raa)}] {r['fichier']}", flush=True)
-        b = get(r["url"], binary=True)
-        if not b:
-            continue  # réessayé la semaine suivante
         try:
-            pub, actes = split_raa(b)
+            tf = texte_dir / (r["numero"] + ".md") if texte_dir else None
+            if tf and tf.exists():
+                pub, actes = split_pages(split_text(tf.read_text(encoding="utf-8")))
+            else:
+                b = get(r["url"], binary=True)
+                if not b:
+                    continue  # PDF inaccessible : reste en attente
+                pub, actes = split_pages(split_text(b)) if CACHE else split_raa(b)
         except Exception as e:  # noqa: BLE001
             print(f"  PDF illisible {r['fichier']}: {e}")
             done.add(r["url"])
@@ -497,11 +586,16 @@ def main():
         done.add(r["url"])
 
     known = set(etat.get("pages_vues", []))
-    for al in scan_extra_pages(enjeux, dossiers, communes, known, baseline=not etat.get("pages_vues")):
+    extra = [] if "--sans-pages" in sys.argv else scan_extra_pages(
+        enjeux, dossiers, communes, known, baseline="--baseline" in sys.argv or not etat.get("pages_vues"))
+    for al in extra:
         if al["uid"] not in by_uid:
             by_uid[al["uid"]] = al
             new += 1
     etat["pages_vues"] = sorted(known)[-3000:]
+    attente = [r for r in tous if r["url"] not in done and r["numero"] >= (raa[0]["numero"] if raa else "")][-MAX_RAA_PER_RUN:]
+    (DATA / "raa_en_attente.json").write_text(json.dumps(attente, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(f"{len(attente)} recueils en attente de lecture")
 
     # recalcul des urgences (les dates avancent) ; les statuts saisis sont conservés
     for a in by_uid.values():

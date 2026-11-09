@@ -1,5 +1,344 @@
 {
- "mise_a_jour": "2026-11-09T06:04",
- "nb_raa_analyses": 0,
- "alertes": []
+ "mise_a_jour": "2026-11-09T11:21",
+ "nb_raa_analyses": 28,
+ "alertes": [
+  {
+   "uid": "73-2026-10-23-00007",
+   "source": "RAA 73-2026-272",
+   "acte": "73-2026-10-23-00007",
+   "titre": "ARRÊTÉ PRÉFECTORAL DDT/SEEF/BF N° 2026-1285 Portant dérogation aux dispositions de l'article L.411-1 du code de l'environnement pour : transport de spécimens, transport en vue de relâcher dans la nature, capture ou enlèvement, destruction, perturbation intentionnelle de spécimens d'espèces animales protégées, destruction, altération ou dégradation de sites de reproduction ou d'aires de repos d'espèces animales protégées, récolte, utilisation, transport, cession, coupe, arrachage, cueillette ou enlèvement de spécimens d'espèces végétales protégées par la communauté de communes de Haute Tarentaise dans le cadre du projet de zone d'activités économiques du Truc, sur la commune de Villaroger",
+   "type": "Dérogation espèces protégées",
+   "date_publication": "2026-10-23",
+   "debut": "",
+   "date_butoir": "2026-12-23",
+   "regle_delai": "Recours contentieux : 2 mois à compter de la publication (R.421-1 CJA). Un recours gracieux dans ce délai le proroge. (date indicative, à vérifier)",
+   "urgence": "À traiter",
+   "score": 28,
+   "enjeux": [
+    "Espèces protégées et dérogations",
+    "Forêt, haies, défrichements, feux",
+    "APPB, réserves, Natura 2000, ENS",
+    "Projets, ICPE et évaluation environnementale"
+   ],
+   "mots_cles": [
+    "CSRPN",
+    "L.411-2",
+    "Vanoise",
+    "boisement",
+    "capture ou enlèvement",
+    "compensation",
+    "coupe",
+    "espèces exotiques envahissantes",
+    "espèces protégées",
+    "forestier",
+    "forêt",
+    "mesures compensatoires"
+   ],
+   "communes": [
+    "Villaroger"
+   ],
+   "dossiers_lies": [],
+   "actions": [
+    "Vérifier les 3 conditions de l'article L.411-2 ; envisager recours gracieux/contentieux, voire référé-suspension.",
+    "Vérifier les 3 conditions de la dérogation",
+    "Lire l'avis CNPN/CSRPN",
+    "Vérifier la surface et la compensation forestière"
+   ],
+   "extrait": "ans le cadre du projet de zone d’activités économiques (ZAE) du Truc situé sur la commune de Villaroger ; *VU* l’avis favorable sous conditions du Conseil Scientifique Régional du Patrimoine Naturel (CSRPN) en date du 6 mai 2026 ; *VU* les réponses apportées par le pétitionnaire en date du 17 août 2026, pour compléter son dossier ; *VU* l’absence d’observation du public à l’issue de la mise en œuvre de la procédure de participation du public par le biais de la mise en ligne de la demande sur le site Internet de la direction régionale de l’environnement, de l’aménagement et du logement Auvergne",
+   "lien": "https://www.savoie.gouv.fr/contenu/telechargement/56424/445465/file/2026-10-23_RAA_N°73-2026-272-special.pdf#page=2",
+   "detecte_le": "2026-11-09",
+   "statut": "Nouveau"
+  },
+  {
+   "uid": "73-2026-10-19-00001",
+   "source": "RAA 73-2026-267",
+   "acte": "73-2026-10-19-00001",
+   "titre": "LYON-TURIN-Chantier opérationnel 11 - Porter à connaissance relatif à la gestion des eaux pour le site de Saint-Julien",
+   "type": "Autorisation environnementale",
+   "date_publication": "2026-10-20",
+   "debut": "",
+   "date_butoir": "2027-02-19",
+   "regle_delai": "Recours des tiers : 4 mois à compter de la publication/affichage (R.181-50 C. env.). (date indicative, à vérifier)",
+   "urgence": "À traiter",
+   "score": 15,
+   "enjeux": [
+    "Lyon-Turin et JO 2030",
+    "Projets, ICPE et évaluation environnementale",
+    "Eau, cours d'eau, zones humides"
+   ],
+   "mots_cles": [
+    "Lyon Turin",
+    "Lyon-Turin",
+    "TELT",
+    "autorisation environnementale",
+    "prélèvement d'eau",
+    "évaluation environnementale"
+   ],
+   "communes": [],
+   "dossiers_lies": [
+    "Lyon-Turin ferroviaire — page officielle préfectorale",
+    "Dérogation espèces protégées — chantier TELT"
+   ],
+   "actions": [
+    "Analyser les prescriptions et mesures ERC ; recours des tiers possible dans les 4 mois.",
+    "Croiser avec les dossiers suivis",
+    "Vérifier les procédures dérogatoires",
+    "Lire le dossier et l'avis de l'autorité environnementale",
+    "Déposer une contribution avant la clôture"
+   ],
+   "extrait": "itoires (DDT) Chambéry, le 19 octobre 2026 Service Environnement, Eau et Forêts La directrice départementale des Territoires à Affaire suivie par : Ingrid BONCOMPAIN Chargée de mission quantitative – Lyon Turin Tél : 04 79 71 75 81 Courriel : ingrid.boncompain@savoie.gouv.fr TELT Bâtiment LINKLAB 455 chemin de la Cassine 73000 CHAMBERY *À* *l’attention* *de* *Madame* *Idana* *MATERIC* *OBJET* *:* Chantier opérationnel 11 – Porter à connaissance relatif à la gestion des eaux pour le site de Saint-Julien *V./RÉF* *:* 1467.TELT_EO.1222.PROD.26 *DIFFUSION* *PAR* *VOIE* *DE* *MESSAGERIE* *UNIQUEMEN",
+   "lien": "https://www.savoie.gouv.fr/contenu/telechargement/56400/445336/file/2026-10-20_RAA_N°73-2026-267.pdf#page=34",
+   "detecte_le": "2026-11-09",
+   "statut": "Nouveau"
+  },
+  {
+   "uid": "73-2026-10-30-00008",
+   "source": "RAA 73-2026-281",
+   "acte": "73-2026-10-30-00008",
+   "titre": "Arrêté préfectoral n°2026-1313 du 30 octobre 2026 portant limitation des usages de l'eau en Savoie",
+   "type": "Arrêté / décision",
+   "date_publication": "2026-11-02",
+   "debut": "",
+   "date_butoir": "2027-01-02",
+   "regle_delai": "Recours contentieux : 2 mois à compter de la publication (R.421-1 CJA). Un recours gracieux dans ce délai le proroge. (date indicative, à vérifier)",
+   "urgence": "À surveiller",
+   "score": 10,
+   "enjeux": [
+    "Eau, cours d'eau, zones humides",
+    "Projets, ICPE et évaluation environnementale"
+   ],
+   "mots_cles": [
+    "ICPE",
+    "cours d'eau",
+    "hydroélectri",
+    "neige de culture",
+    "retenue collinaire"
+   ],
+   "communes": [],
+   "dossiers_lies": [
+    "APPB Sud du lac du Bourget",
+    "APPB Lac d'Aiguebelette"
+   ],
+   "actions": [
+    "Lire l'arrêté ; évaluer l'opportunité d'un recours gracieux ou contentieux (2 mois).",
+    "Vérifier période de travaux (frai, nidification)",
+    "Contrôler mesures ERC et suivi",
+    "Lire le dossier et l'avis de l'autorité environnementale",
+    "Déposer une contribution avant la clôture"
+   ],
+   "extrait": "« accessoires », non lié au process, sont concernés par les mesures de restrictions identiques à celles appliquées aux usagers collectifs (arrosage des pelouses, lavages de véhicules, etc). Pour les ICPE agricoles, les mesures s’appliquant à l’abreuvement et au nettoyage des véhicules et bâtiments sont celles détaillées à l’article 3.2. Article 2.4. Mesures applicables à la production de neige de culture et au remplissage des retenues collinaires à usage neige Les débits maximaux des captages dans le milieu naturel, pour la production directe et le remplissage des retenues collinaires (hors e",
+   "lien": "https://www.savoie.gouv.fr/contenu/telechargement/56633/446843/file/2026-11-02_RAA_N°73-2026-281-special.pdf#page=2",
+   "detecte_le": "2026-11-09",
+   "statut": "Nouveau"
+  },
+  {
+   "uid": "73-2026-10-19-00007",
+   "source": "RAA 73-2026-271",
+   "acte": "73-2026-10-19-00007",
+   "titre": "Arrêté préfectoral n°DDETSPP-PV-PSA-20261019-01 définissant une zone vaccinale vis-à-vis de la dermatose contagieuse bovine (DNCB)",
+   "type": "Arrêté / décision",
+   "date_publication": "2026-10-22",
+   "debut": "",
+   "date_butoir": "2026-12-22",
+   "regle_delai": "Recours contentieux : 2 mois à compter de la publication (R.421-1 CJA). Un recours gracieux dans ce délai le proroge. (date indicative, à vérifier)",
+   "urgence": "À surveiller",
+   "score": 9,
+   "enjeux": [
+    "APPB, réserves, Natura 2000, ENS",
+    "Espèces exotiques envahissantes et sanitaires"
+   ],
+   "mots_cles": [
+    "Vanoise",
+    "dermatose nodulaire"
+   ],
+   "communes": [],
+   "dossiers_lies": [
+    "Chasse et pêche — publications préfectorales"
+   ],
+   "actions": [
+    "Lire l'arrêté ; évaluer l'opportunité d'un recours gracieux ou contentieux (2 mois).",
+    "Vérifier la compatibilité avec la réglementation du site",
+    "Contrôler l'évaluation des incidences Natura 2000",
+    "Vérifier les effets sur la faune sauvage non cible"
+   ],
+   "extrait": "s Populations - 73-2026-10-19-00007 - Arrêté préfectoral n°DDETSPP-PV-PSA-20261019-01 définissant une zone vaccinale vis-à-vis de la dermatose contagieuse bovine (DNCB) Champagneux 73070 Champagny-en-Vanoise 73071 Chanaz 73073 Châteauneuf 73079 Chignin 73084 Chindrieux 73085 Cléry 73086 Cognin 73087 Cohennoz 73088 Coise-Saint-Jean-Pied-Gauthier 73089 Conjux 73091 Corbel 73092 Courchevel 73227 Crest-Voland 73094 Cruet 73096 Curienne 73097 Détrier 73099 Domessin 73100 Doucy-en-Bauges 73101 Drumettaz-Clarafond 73103 Dullin 73104 École 73106 Entrelacs 73010 Entremont-le-Vieux 73107 Épierre 73109 E",
+   "lien": "https://www.savoie.gouv.fr/contenu/telechargement/56409/445381/file/2026-10-22_RAA_N°73-2026-271-special.pdf#page=2",
+   "detecte_le": "2026-11-09",
+   "statut": "Nouveau"
+  },
+  {
+   "uid": "73-2026-10-29-00001",
+   "source": "RAA 73-2026-282",
+   "acte": "73-2026-10-29-00001",
+   "titre": "Arrêté préfectoral SCPP n° 27-2026 portant modification de la composition de la commission départementale de la nature, des paysages et des sites",
+   "type": "Arrêté / décision",
+   "date_publication": "2026-11-03",
+   "debut": "",
+   "date_butoir": "2027-01-03",
+   "regle_delai": "Recours contentieux : 2 mois à compter de la publication (R.421-1 CJA). Un recours gracieux dans ce délai le proroge. (date indicative, à vérifier)",
+   "urgence": "À surveiller",
+   "score": 9,
+   "enjeux": [
+    "APPB, réserves, Natura 2000, ENS",
+    "Chasse et gestion cynégétique",
+    "Aménagements de montagne et tourisme",
+    "Projets, ICPE et évaluation environnementale"
+   ],
+   "mots_cles": [
+    "CDNPS",
+    "Vanoise",
+    "carrière",
+    "chasse",
+    "fédération départementale des chasseurs",
+    "parc national",
+    "remontées mécaniques"
+   ],
+   "communes": [],
+   "dossiers_lies": [],
+   "actions": [
+    "Lire l'arrêté ; évaluer l'opportunité d'un recours gracieux ou contentieux (2 mois).",
+    "Vérifier la compatibilité avec la réglementation du site",
+    "Contrôler l'évaluation des incidences Natura 2000",
+    "Comparer aux années précédentes et au SDGC",
+    "Vérifier l'avis de la CDCFS et la consultation du public"
+   ],
+   "extrait": "notamment ses articles R. 341-16 et suivants ; VU l'arrêté préfectoral SCPP n°38-2024 du 12 décembre 2024 portant composition de la Commission Départementale de la Nature, des Paysages et des Sites (CDNPS) tel que modifié par arrêtés du 29 septembre 2025 et du 21 avril 2026 ; Vu le courrier du 3 septembre 2026 de la chambre d’agriculture Savoie Mont-Blanc relatif à la modification de ses représentants à la CDNPS ; SUR proposition de Monsieur le Secrétaire général de la Préfecture de la Savoie. ARR Ê TE ARTICLE 1 er : L'article 2 de l'arrêté préfectoral SCPP n°38-2024 du 12 décembre 2024 modif",
+   "lien": "https://www.savoie.gouv.fr/contenu/telechargement/56649/446923/file/2026-11-03_RAA_N°73-2026-282.pdf#page=28",
+   "detecte_le": "2026-11-09",
+   "statut": "Nouveau"
+  },
+  {
+   "uid": "73-2026-10-16-00011",
+   "source": "RAA 73-2026-267",
+   "acte": "73-2026-10-16-00011",
+   "titre": "Arrêté préfectoral n°ICPE-2026-089 en date du 16/10/2026 portant prorogation de l'enquête publique - Installations Classées pour la Protection de l'environnement - SOCIÉTÉ MODANAISE DE VALORISATION (SMV) - Commune de MODANE",
+   "type": "Enquête publique",
+   "date_publication": "2026-10-20",
+   "debut": "",
+   "date_butoir": "2026-12-20",
+   "regle_delai": "Recours contentieux : 2 mois à compter de la publication (R.421-1 CJA). Un recours gracieux dans ce délai le proroge. (date indicative, à vérifier)",
+   "urgence": "À surveiller",
+   "score": 6,
+   "enjeux": [
+    "Projets, ICPE et évaluation environnementale"
+   ],
+   "mots_cles": [
+    "ICPE",
+    "enquête publique"
+   ],
+   "communes": [],
+   "dossiers_lies": [],
+   "actions": [
+    "Consulter le dossier et l'avis de l'autorité environnementale ; déposer une contribution argumentée avant la clôture.",
+    "Lire le dossier et l'avis de l'autorité environnementale",
+    "Déposer une contribution avant la clôture"
+   ],
+   "extrait": "# 73_PREF_Préfecture de la Savoie # 73-2026-10-16-00011 # Arrêté préfectoral n°ICPE-2026-089 en date du # 16/10/2026 portant prorogation de l'enquête # publique - Installations Classées pour la Protection de l'environnement - SOCIÉTÉ # MODANAISE DE VALORISATION (SMV) - # Commune de MODANE 73_PREF_Préfecture de la Savoie - 73-2026-10-16-00011 - Arrêté préfectoral n°ICPE-2026-089 en date du 16/10/2026 portant prorogation de l'enquête publique - Installations Classées pour la P",
+   "lien": "https://www.savoie.gouv.fr/contenu/telechargement/56400/445336/file/2026-10-20_RAA_N°73-2026-267.pdf#page=89",
+   "detecte_le": "2026-11-09",
+   "statut": "Nouveau"
+  },
+  {
+   "uid": "73-2026-09-15-00007",
+   "source": "RAA 73-2026-260",
+   "acte": "73-2026-09-15-00007",
+   "titre": "AP d ouverture d enquête DUP et parcellaire projet régularisation ruelle du Colporteur Cne Peisey-Nancroix",
+   "type": "Enquête publique",
+   "date_publication": "2026-10-13",
+   "debut": "2026-10-19",
+   "date_butoir": "2026-11-06",
+   "regle_delai": "Clôture de la participation : déposer une contribution avant cette date.",
+   "urgence": "Échue",
+   "score": 4,
+   "enjeux": [
+    "Projets, ICPE et évaluation environnementale"
+   ],
+   "mots_cles": [
+    "DUP",
+    "déclaration d'utilité publique"
+   ],
+   "communes": [
+    "Peisey-Nancroix",
+    "Albertville"
+   ],
+   "dossiers_lies": [],
+   "actions": [
+    "Consulter le dossier et l'avis de l'autorité environnementale ; déposer une contribution argumentée avant la clôture.",
+    "Lire le dossier et l'avis de l'autorité environnementale",
+    "Déposer une contribution avant la clôture"
+   ],
+   "extrait": "# 73_PREF_Préfecture de la Savoie # 73-2026-09-15-00007 # AP d ouverture d enquête DUP et parcellaire projet régularisation ruelle du Colporteur Cne # Peisey-Nancroix 73_PREF_Préfecture de la Savoie - 73-2026-09-15-00007 - AP d ouverture d enquête DUP et parcellaire projet régularisation ruelle du Colporteur Cne Peisey-Nancroix ## Sous-préfecture ## d’Albertville Pôle animation du territoire Bureau des enquêtes publiques Arrêté préfectoral n° SPA/73/2026/418 du 15 septembre 2026",
+   "lien": "https://www.savoie.gouv.fr/contenu/telechargement/56327/444909/file/2026-10-13_RAA_N°73-2026-260.pdf#page=140",
+   "detecte_le": "2026-11-09",
+   "statut": "Nouveau"
+  },
+  {
+   "uid": "73-2026-10-13-00002",
+   "source": "RAA 73-2026-267",
+   "acte": "73-2026-10-13-00002",
+   "titre": "Arrêté préfectoral DDT/SEEF/BF n° 2026-1268 en date du 13 octobre 2026 Portant application du régime forestier sur la commune d'AILLON-LE-VIEUX pour une surface de 11 ha 31 a 00 ca",
+   "type": "Arrêté / décision",
+   "date_publication": "2026-10-20",
+   "debut": "",
+   "date_butoir": "2026-12-20",
+   "regle_delai": "Recours contentieux : 2 mois à compter de la publication (R.421-1 CJA). Un recours gracieux dans ce délai le proroge. (date indicative, à vérifier)",
+   "urgence": "À surveiller",
+   "score": 4,
+   "enjeux": [
+    "Forêt, haies, défrichements, feux"
+   ],
+   "mots_cles": [
+    "forestier",
+    "forêt"
+   ],
+   "communes": [
+    "Aillon-le-Vieux"
+   ],
+   "dossiers_lies": [],
+   "actions": [
+    "Lire l'arrêté ; évaluer l'opportunité d'un recours gracieux ou contentieux (2 mois).",
+    "Vérifier la surface et la compensation forestière"
+   ],
+   "extrait": "# 73_DDT_Direction départementale des # territoires de Savoie # 73-2026-10-13-00002 # Arrêté préfectoral DDT/SEEF/BF n° 2026-1268 en # date du 13 octobre 2026 Portant application du régime forestier sur la # commune d'AILLON-LE-VIEUX pour une surface de 11 ha 31 a 00 ca 73_DDT_Direction départementale des territoires de Savoie - 73-2026-10-13-00002 - Arrêté préfectoral DDT/SEEF/BF n° 2026-1268 en date du 13 octobre 2026 Portant application du régime forestier sur la commune d'AILLON-LE-VIEUX *Direction* *Départementale* *des* *Territoires* *(DDT)* Service Environnement, Eau, Forêt *",
+   "lien": "https://www.savoie.gouv.fr/contenu/telechargement/56400/445336/file/2026-10-20_RAA_N°73-2026-267.pdf#page=26",
+   "detecte_le": "2026-11-09",
+   "statut": "Nouveau"
+  },
+  {
+   "uid": "73-2026-10-31-00001",
+   "source": "RAA 73-2026-282",
+   "acte": "73-2026-10-31-00001",
+   "titre": "ARRÊTÉ PRÉFECTORAL COMPLÉMENTAIRE N° DS-SIDPC-2026-86 DU 31 OCTOBRE 2026 relatif à la cote d'exploitation du barrage de la Loze",
+   "type": "Arrêté / décision",
+   "date_publication": "2026-11-03",
+   "debut": "",
+   "date_butoir": "2027-01-03",
+   "regle_delai": "Recours contentieux : 2 mois à compter de la publication (R.421-1 CJA). Un recours gracieux dans ce délai le proroge. (date indicative, à vérifier)",
+   "urgence": "À surveiller",
+   "score": 4,
+   "enjeux": [
+    "Eau, cours d'eau, zones humides",
+    "Aménagements de montagne et tourisme"
+   ],
+   "mots_cles": [
+    "SAGE",
+    "domaine skiable",
+    "neige de culture",
+    "retenue d'altitude"
+   ],
+   "communes": [],
+   "dossiers_lies": [],
+   "actions": [
+    "Lire l'arrêté ; évaluer l'opportunité d'un recours gracieux ou contentieux (2 mois).",
+    "Vérifier période de travaux (frai, nidification)",
+    "Contrôler mesures ERC et suivi",
+    "Vérifier l'étude d'impact et les inventaires",
+    "Contribuer à l'enquête/participation du public"
+   ],
+   "extrait": "026-10-31-00001 - ARRÊTÉ PRÉFECTORAL COMPLÉMENTAIRE N° DS-SIDPC-2026-86 DU 31 OCTOBRE 2026 relatif à la cote d'exploitation du barrage de la Loze VU la note technique relative aux modalités de remplissage exceptionnel de la retenue de la Loze à 60 000 m³ du 25 février 2026 établie par le groupement agréé MDP Consulting et Sage Environnement ; VU la demande de dérogation temporaire à la cote d’exploitation présentée par la Société des Trois Vallées par courrier du 6 mars 2026 ; VU le compte-rendu de la réunion du 31 mars 2026 relative à la demande de dérogation à l’arrêté du 16 décembre 2025 en",
+   "lien": "https://www.savoie.gouv.fr/contenu/telechargement/56649/446923/file/2026-11-03_RAA_N°73-2026-282.pdf#page=38",
+   "detecte_le": "2026-11-09",
+   "statut": "Nouveau"
+  }
+ ]
 }

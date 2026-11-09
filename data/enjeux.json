@@ -1,6 +1,6 @@
 {
  "version": "2026-11-06",
- "intro": "Ce référentiel oriente la veille : chaque enjeu définit ce qu'on cherche, pourquoi, les mots-clés de détection et les actions types. Le moteur d'alertes lit ce fichier à chaque exécution : modifier un mot-clé ici modifie la détection.",
+ "intro": "Ce référentiel oriente la veille : chaque enjeu définit ce qu'on cherche, pourquoi, les mots-clés de détection et les actions types. Le moteur d'alertes lit ce fichier à chaque exécution : modifier un mot-clé ici modifie la détection. Les « mots-clés de contexte » (ex. noms d'espèces) ne comptent que si un mot-clé principal du même enjeu est présent.",
  "seuil_alerte": 4,
  "enjeux": [
   {
@@ -11,15 +11,19 @@
    "mots_cles": [
     "espèce protégée",
     "espèces protégées",
-    "dérogation",
     "L.411-2",
     "L 411-2",
-    "capture",
     "perturbation intentionnelle",
     "destruction d'habitat",
     "CNPN",
     "conseil national de la protection de la nature",
-    "CSRPN"
+    "CSRPN",
+    "dérogation aux interdictions",
+    "dérogation à l'interdiction",
+    "dérogation espèces protégées",
+    "capture ou enlèvement",
+    "destruction de spécimens",
+    "spécimens d'espèces"
    ],
    "actions": [
     "Vérifier les 3 conditions de la dérogation",
@@ -146,8 +150,18 @@
     "ESOD",
     "susceptibles d'occasionner des dégâts",
     "nuisible",
-    "destruction",
     "piégeage",
+    "déterrage",
+    "vénerie sous terre",
+    "destruction à tir",
+    "autorisation de destruction"
+   ],
+   "actions": [
+    "Vérifier les données de dégâts justifiant le classement",
+    "Participer à la consultation du public",
+    "Recours 2 mois"
+   ],
+   "mots_cles_contexte": [
     "renard",
     "corneille",
     "corbeau freux",
@@ -161,15 +175,8 @@
     "ragondin",
     "rat musqué",
     "blaireau",
-    "déterrage",
-    "vénerie sous terre",
     "lapin de garenne",
     "sanglier"
-   ],
-   "actions": [
-    "Vérifier les données de dégâts justifiant le classement",
-    "Participer à la consultation du public",
-    "Recours 2 mois"
    ]
   },
   {
@@ -184,8 +191,6 @@
     "tirs de défense",
     "tir de prélèvement",
     "prédation",
-    "lynx",
-    "ours",
     "grands prédateurs",
     "protection des troupeaux"
    ],
@@ -193,6 +198,10 @@
     "Vérifier la mise en place des moyens de protection",
     "Vérifier la durée et le périmètre",
     "Recours / référé-suspension"
+   ],
+   "mots_cles_contexte": [
+    "lynx",
+    "ours"
    ]
   },
   {
@@ -203,13 +212,15 @@
    "mots_cles": [
     "cormoran",
     "phalacrocorax",
-    "oiseaux piscivores",
-    "harle",
-    "héron"
+    "oiseaux piscivores"
    ],
    "actions": [
     "Vérifier quotas, zones et périodes",
     "Recours 2 mois"
+   ],
+   "mots_cles_contexte": [
+    "harle",
+    "héron"
    ]
   },
   {
@@ -304,11 +315,9 @@
     "Lyon Turin",
     "TELT",
     "tunnel euralpin",
-    "Saint-Jean-de-Maurienne",
     "jeux olympiques",
     "JOP 2030",
     "JO 2030",
-    "olympique",
     "paralympique",
     "SOLIDEO",
     "Alpes françaises 2030"
@@ -358,7 +367,12 @@
   "championnat de france",
   "manifestation sportive",
   "course pédestre",
-  "rallye"
+  "rallye",
+  "repos dominical",
+  "code du travail",
+  "titre de séjour",
+  "permis de conduire",
+  "commission de sécurité"
  ],
  "delais": {
   "recours_general": {
