@@ -8,11 +8,10 @@
 :root{--bg:#f6f5f1;--card:#fff;--ink:#1f2a24;--mute:#5f6b64;--line:#dfe3dc;--acc:#2f6b4f;--acc2:#e8f1ec;
 --red:#b3261e;--redbg:#fbe9e7;--ora:#a65b00;--orabg:#fdf0dc;--yel:#7a6400;--yelbg:#fbf6d8;--grn:#2f6b4f;--grnbg:#e5f2ea;--gry:#6b6b6b;--grybg:#eee}
 *{box-sizing:border-box}body{margin:0;font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
-header{background:var(--acc);color:#fff;padding:18px 24px 0;position:sticky;top:0;z-index:30;box-shadow:0 2px 10px rgba(0,0,0,.18)}
-header.compact{padding:6px 24px 0}
-header.compact h1,header.compact p{display:none}
-header h1{margin:0;font-size:20px;font-weight:650}header p{margin:4px 0 14px;opacity:.85;font-size:13px}
-nav{display:flex;gap:4px}nav button{border:0;background:transparent;color:#fff;opacity:.75;padding:10px 16px;font:inherit;font-weight:600;cursor:pointer;border-radius:8px 8px 0 0}
+header{background:var(--acc);color:#fff;padding:18px 24px 8px}
+header h1{margin:0;font-size:20px;font-weight:650}header p{margin:4px 0 0;opacity:.85;font-size:13px}
+nav{display:flex;gap:4px;align-items:center;flex-wrap:wrap;position:sticky;top:0;z-index:30;background:var(--acc);padding:6px 24px;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+nav button{border:0;background:transparent;color:#fff;opacity:.75;padding:10px 16px;font:inherit;font-weight:600;cursor:pointer;border-radius:8px}
 nav button.on{background:var(--bg);color:var(--acc);opacity:1}nav .badge{background:var(--red);color:#fff;border-radius:10px;padding:0 7px;font-size:12px;margin-left:6px}
 main{max-width:1280px;margin:0 auto;padding:20px 24px 60px}
 .tab{display:none}.tab.on{display:block}
@@ -64,14 +63,14 @@ a{color:var(--acc)}.empty{padding:30px;text-align:center;color:var(--mute)}
 <header>
 <h1>Veille juridique biodiversité</h1>
 <p id="maj">France · Auvergne-Rhône-Alpes · Savoie (arrêtés préfectoraux, RAA, enquêtes publiques)</p>
-<nav style="display:flex;align-items:center;flex-wrap:wrap">
+</header>
+<nav>
 <button data-t="enjeux">1 · Enjeux éditoriaux</button>
 <button data-t="dossiers">2 · Dossiers suivis</button>
 <button data-t="alertes" class="on">3 · Alertes de la semaine<span class="badge" id="nbnew">0</span></button>
 <button data-t="signalements">4 · Signalements<span class="badge" style="background:#fff;color:var(--acc)" id="nbsign">0</span></button>
 <button id="signBtn" type="button">＋ Signaler une alerte</button>
 </nav>
-</header>
 <main>
 
 <section class="tab" id="t-enjeux">
@@ -148,7 +147,6 @@ const fr=d=>d?new Date(d+'T12:00').toLocaleDateString('fr-FR',{day:'numeric',mon
 const days=d=>Math.round((new Date(d+'T12:00')-new Date(new Date().toDateString()+' 12:00'))/864e5);
 const prCls=p=>/très/i.test(p)?'p-tres':/élev/i.test(p)?'p-elev':'p-moy', uCls=u=>'u-'+String(u).replace(/ /g,'-');
 document.querySelectorAll('nav button[data-t]').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button[data-t],.tab').forEach(x=>x.classList.remove('on'));b.classList.add('on');$('#t-'+b.dataset.t).classList.add('on')});
-addEventListener('scroll',()=>document.querySelector('header').classList.toggle('compact',scrollY>80),{passive:true});
 function csv(t){const r=[];let row=[],f='',q=false;for(let i=0;i<t.length;i++){const c=t[i];if(q){if(c=='"'&&t[i+1]=='"'){f+='"';i++}else if(c=='"')q=false;else f+=c}else if(c=='"')q=true;else if(c==','){row.push(f);f=''}else if(c=='\n'){row.push(f);r.push(row);row=[];f=''}else if(c!='\r')f+=c}if(f||row.length){row.push(f);r.push(row)}const h=r.shift();return r.filter(x=>x.length>1).map(x=>Object.fromEntries(h.map((k,i)=>[k,x[i]||''])))}
 const fill=(sel,vals)=>[...new Set(vals)].filter(Boolean).sort().forEach(v=>$(sel).insertAdjacentHTML('beforeend',`<option>${esc(v)}</option>`));
 const ST=JSON.parse(localStorage.getItem('veille-statuts')||'{}');const saveST=()=>localStorage.setItem('veille-statuts',JSON.stringify(ST));
