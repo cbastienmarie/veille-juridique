@@ -41,10 +41,13 @@ def main():
         titre = val(ans, "titre")
         if not titre or any(t in (titre + val(ans, "description")).lower() for t in IGNORE):
             continue
+        # Le site et le dépôt sont publics : ne pas y publier les coordonnées
+        # complètes. Elles restent consultables dans les réponses du formulaire.
+        nom = val(ans, "nom")
         out.append({
             "uid": r.get("responseId", ""),
-            "prenom": val(ans, "prenom"), "nom": val(ans, "nom"),
-            "coordonnees": val(ans, "coordonnees"),
+            "prenom": val(ans, "prenom"), "nom": (nom[:1] + ".") if nom else "",
+            "coordonnees": "transmises au groupe juridique",
             "date_alerte": val(ans, "date_alerte"),
             "titre": titre, "communes": val(ans, "communes"),
             "lien": val(ans, "lien"), "description": val(ans, "description"),
