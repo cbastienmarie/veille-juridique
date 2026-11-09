@@ -123,7 +123,10 @@ a{color:var(--acc)}.empty{padding:30px;text-align:center;color:var(--mute)}
 <div><label class="req" for="sf-p">Prénom</label><input id="sf-p" required></div>
 <div><label class="req" for="sf-n">Nom</label><input id="sf-n" required></div>
 </div>
-<label class="req" for="sf-c">Coordonnées (e-mail et/ou téléphone)</label><input id="sf-c" required>
+<div class="row">
+<div><label class="req" for="sf-e">E-mail</label><input id="sf-e" type="email" required></div>
+<div><label for="sf-tel">Téléphone (facultatif)</label><input id="sf-tel" type="tel"></div>
+</div>
 <div class="row">
 <div><label class="req" for="sf-d">Date de l’alerte</label><input id="sf-d" type="date" required></div>
 <div><label for="sf-l">Commune(s) ou lieu concerné</label><input id="sf-l" placeholder="Ex. : Peisey-Nancroix"></div>
@@ -133,7 +136,7 @@ a{color:var(--acc)}.empty{padding:30px;text-align:center;color:var(--mute)}
 <label class="req" for="sf-de">Description de l’alerte</label><textarea id="sf-de" rows="5" required placeholder="Décrivez précisément l’objet du signalement et pourquoi il mérite une étude juridique."></textarea>
 <button class="send" type="submit">Envoyer le signalement</button>
 <div class="msg" id="signMsg"></div>
-<p class="meta" style="margin-top:8px">En cas de difficulté, vous pouvez aussi remplir le <a href="https://docs.google.com/forms/d/e/1FAIpQLSejE8yXHist2mBKFsIb7-d7S9dSmq9ij8s7ZPhp5IV7xcnANw/viewform" target="_blank" rel="noopener">formulaire en ligne dédié</a>.</p>
+<p class="meta" style="margin-top:8px">En cas de difficulté, vous pouvez aussi remplir le <a href="https://docs.google.com/forms/d/e/1FAIpQLSfRLd1sayjJKdgkhOVOGUvC4m8DTdSUGA1jbaU_6TI7QTbatQ/viewform" target="_blank" rel="noopener">formulaire en ligne dédié</a>.</p>
 </form>
 </div>
 <iframe name="signFrame" style="display:none" title="envoi"></iframe>
@@ -154,8 +157,8 @@ Promise.all([fetch('data/enjeux.json').then(r=>r.json()),fetch('data/dossiers.cs
  renderSign();initAlertes(E)}).catch(e=>{$('#a-list').innerHTML=`<div class="empty">Erreur de chargement des données (${esc(e)}). Le tableau doit être ouvert via GitHub Pages.</div>`});
 
 /* ---- Signalements (groupe juridique) ---- */
-const GID={p:'1434154626',n:'944015406',c:'305702213',d:'1030520975',t:'1430536643',l:'806391754',li:'1567278',de:'1118498980'};
-const FORM_URL='https://docs.google.com/forms/d/e/1FAIpQLSejE8yXHist2mBKFsIb7-d7S9dSmq9ij8s7ZPhp5IV7xcnANw/formResponse';
+const GID={p:'681360293',n:'548366700',e:'193879102',tel:'1041468071',d:'1945084962',t:'129833351',l:'804109354',li:'324582295',de:'345709220'};
+const FORM_URL='https://docs.google.com/forms/d/e/1FAIpQLSfRLd1sayjJKdgkhOVOGUvC4m8DTdSUGA1jbaU_6TI7QTbatQ/formResponse';
 function renderSign(){$('#nbsign').textContent=SIGN.length;
  $('#s-count').textContent=`${SIGN.length} signalement(s) — à l'étude pour le groupe juridique`;
  $('#s-list').innerHTML=SIGN.length?SIGN.map(s=>`<div class="sign"><div class="h">${esc(s.titre)}</div>
@@ -170,7 +173,7 @@ modal.onclick=e=>{if(e.target==modal)modal.classList.remove('on')};
 $('#signForm').onsubmit=e=>{
  e.preventDefault();
  const f=document.createElement('form');f.method='POST';f.action=FORM_URL;f.target='signFrame';f.style.display='none';
- const v={p:$('#sf-p').value.trim(),n:$('#sf-n').value.trim(),c:$('#sf-c').value.trim(),d:$('#sf-d').value,t:$('#sf-t').value.trim(),l:$('#sf-l').value.trim(),li:$('#sf-li').value.trim(),de:$('#sf-de').value.trim()};
+ const v={p:$('#sf-p').value.trim(),n:$('#sf-n').value.trim(),e:$('#sf-e').value.trim(),tel:$('#sf-tel').value.trim(),d:$('#sf-d').value,t:$('#sf-t').value.trim(),l:$('#sf-l').value.trim(),li:$('#sf-li').value.trim(),de:$('#sf-de').value.trim()};
  for(const[k,g]of Object.entries(GID)){if(!v[k])continue;const i=document.createElement('input');i.type='hidden';i.name='entry.'+g;i.value=v[k];f.appendChild(i)}
  document.body.appendChild(f);f.submit();f.remove();
  const m=$('#signMsg');m.className='msg ok';m.style.display='block';

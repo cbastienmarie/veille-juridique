@@ -12,12 +12,12 @@ import json
 import sys
 from pathlib import Path
 
-FORM_ID = "1TJGpJ3Dzz2L3YtQChjRvK8u4QrhXgJGFXTVrBfkfzv0"
-VIEW = "https://docs.google.com/forms/d/e/1FAIpQLSejE8yXHist2mBKFsIb7-d7S9dSmq9ij8s7ZPhp5IV7xcnANw/viewform"
-# identifiants des questions du formulaire
-Q = {"prenom": "557b7682", "nom": "3844882e", "coordonnees": "1238a545",
-     "date_alerte": "3d6c808f", "titre": "554441c3", "communes": "30108fca",
-     "lien": "0017ea2e", "description": "42aaf0a4"}
+FORM_ID = "1qu67gbLhTImhZ1Ih2wKLzDc6iwwlCsCZH9X5zQoyLAM"
+VIEW = "https://docs.google.com/forms/d/e/1FAIpQLSfRLd1sayjJKdgkhOVOGUvC4m8DTdSUGA1jbaU_6TI7QTbatQ/viewform"
+# identifiants des questions du formulaire (e-mail et téléphone séparés)
+Q = {"prenom": "289cbba5", "nom": "20af696c", "email": "0b8e5c3e", "telephone": "3e138aa7",
+     "date_alerte": "73efa422", "titre": "07bd1987", "communes": "2fedbc2a",
+     "lien": "1358bb97", "description": "149b1aa4"}
 IGNORE = ("test de fonctionnement", "test technique")  # signalements de test
 
 
